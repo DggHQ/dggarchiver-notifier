@@ -1,0 +1,5 @@
+client_secret.json
+dggarchiver-notifier*
+data/
+*.env
+.vscode
