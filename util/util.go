@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	log "github.com/DggHQ/dggarchiver-notifier/logger"
+	log "github.com/DggHQ/dggarchiver-logger"
 )
 
 type State struct {

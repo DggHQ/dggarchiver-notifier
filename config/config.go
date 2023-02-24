@@ -7,26 +7,13 @@ import (
 	"strconv"
 	"strings"
 
-	log "github.com/DggHQ/dggarchiver-notifier/logger"
+	log "github.com/DggHQ/dggarchiver-logger"
 	"github.com/joho/godotenv"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
 )
-
-// Contains the data structure for the YouTube VOD/livestream
-type YTVod struct {
-	ID            string `json:"id"`
-	PubTime       string `json:"pubtime"`
-	Title         string `json:"title"`
-	StartTime     string `json:"starttime"`
-	EndTime       string `json:"endtime"`
-	Thumbnail     string `json:"thumbnail"`
-	ThumbnailPath string `json:"thumbnailpath"`
-	Path          string `json:"path"`
-	Duration      int    `json:"duration"`
-}
 
 type Flags struct {
 	Verbose bool

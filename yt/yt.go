@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/DggHQ/dggarchiver-logger"
+	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
 	"github.com/DggHQ/dggarchiver-notifier/config"
-	log "github.com/DggHQ/dggarchiver-notifier/logger"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	"github.com/gocolly/colly/v2"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -98,7 +99,7 @@ func LoopApiLivestream(cfg *config.Config, state *util.State, L *lua.LState) err
 		if cfg.PluginConfig.On {
 			util.LuaCallReceiveFunction(L, vid[0].Id)
 		}
-		vod := &config.YTVod{
+		vod := &dggarchivermodel.YTVod{
 			ID:        vid[0].Id,
 			PubTime:   vid[0].Snippet.PublishedAt,
 			Title:     vid[0].Snippet.Title,
@@ -153,7 +154,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 			return err
 		}
 
-		vod := &config.YTVod{
+		vod := &dggarchivermodel.YTVod{
 			ID:        vid[0].Id,
 			PubTime:   vid[0].Snippet.PublishedAt,
 			Title:     vid[0].Snippet.Title,

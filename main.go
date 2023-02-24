@@ -1,21 +1,16 @@
 package main
 
 import (
-	"os"
 	"sync"
 	"time"
 
+	log "github.com/DggHQ/dggarchiver-logger"
 	"github.com/DggHQ/dggarchiver-notifier/config"
-	log "github.com/DggHQ/dggarchiver-notifier/logger"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	"github.com/DggHQ/dggarchiver-notifier/yt"
-	apex "github.com/apex/log"
-	"github.com/apex/log/handlers/text"
 )
 
 func init() {
-	log.SetHandler(text.New((os.Stderr)))
-
 	loc, err := time.LoadLocation("UTC")
 	if err != nil {
 		log.Fatalf("%s", err)
@@ -28,7 +23,7 @@ func main() {
 	cfg.Initialize()
 
 	if cfg.Flags.Verbose {
-		log.SetLevel(apex.DebugLevel)
+		log.SetLevel(log.DebugLevel)
 	}
 
 	state := util.State{

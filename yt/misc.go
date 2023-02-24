@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"time"
 
+	log "github.com/DggHQ/dggarchiver-logger"
 	"github.com/DggHQ/dggarchiver-notifier/config"
-	log "github.com/DggHQ/dggarchiver-notifier/logger"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	luaLibs "github.com/vadv/gopher-lua-libs"
 	lua "github.com/yuin/gopher-lua"

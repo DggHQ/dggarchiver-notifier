@@ -1,7 +1,7 @@
 package util
 
 import (
-	"github.com/DggHQ/dggarchiver-notifier/config"
+	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
 	"github.com/apex/log"
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
@@ -39,7 +39,7 @@ func LuaCallReceiveFunction(L *lua.LState, vod string) *LuaResponse {
 	return result
 }
 
-func LuaCallSendFunction(L *lua.LState, vod *config.YTVod) *LuaResponse {
+func LuaCallSendFunction(L *lua.LState, vod *dggarchivermodel.YTVod) *LuaResponse {
 	luaVOD := luar.New(L, vod)
 
 	result := &LuaResponse{}
