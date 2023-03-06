@@ -11,7 +11,6 @@ import (
 	"github.com/DggHQ/dggarchiver-notifier/config"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	"github.com/gocolly/colly/v2"
-	amqp "github.com/rabbitmq/amqp091-go"
 	lua "github.com/yuin/gopher-lua"
 	"golang.org/x/exp/slices"
 	"google.golang.org/api/googleapi"
@@ -113,20 +112,7 @@ func LoopApiLivestream(cfg *config.Config, state *util.State, L *lua.LState) err
 			log.Fatalf("[YT] [API] Couldn't marshal VOD with ID %s into a JSON object: %v", vod.ID, err)
 		}
 
-		msg := amqp.Publishing{
-			ContentType: "application/json",
-			Body:        bytes,
-		}
-
-		err = cfg.AMQPConfig.Channel.PublishWithContext(
-			cfg.AMQPConfig.Context,
-			cfg.AMQPConfig.ExchangeName,
-			cfg.AMQPConfig.QueueName,
-			false,
-			false,
-			msg,
-		)
-		if err != nil {
+		if err = cfg.NATSConfig.NatsConnection.Publish(fmt.Sprintf("%s.job", cfg.NATSConfig.Topic), bytes); err != nil {
 			log.Errorf("[YT] [API] Wasn't able to send message with VOD with ID %s: %v", vod.ID, err)
 			return nil
 		}
@@ -168,20 +154,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 			log.Fatalf("[YT] [SCRAPER] Couldn't marshal VOD with ID %s into a JSON object: %v", vod.ID, err)
 		}
 
-		msg := amqp.Publishing{
-			ContentType: "application/json",
-			Body:        bytes,
-		}
-
-		err = cfg.AMQPConfig.Channel.PublishWithContext(
-			cfg.AMQPConfig.Context,
-			cfg.AMQPConfig.ExchangeName,
-			cfg.AMQPConfig.QueueName,
-			false,
-			false,
-			msg,
-		)
-		if err != nil {
+		if err = cfg.NATSConfig.NatsConnection.Publish(fmt.Sprintf("%s.job", cfg.NATSConfig.Topic), bytes); err != nil {
 			log.Errorf("[YT] [SCRAPER] Wasn't able to send message with VOD with ID %s: %v", vod.ID, err)
 			return nil
 		}
