@@ -6,10 +6,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/DggHQ/dggarchiver-logger"
 	"github.com/joho/godotenv"
-	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/nats-io/nats.go"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
@@ -28,14 +29,10 @@ type YTConfig struct {
 	Service       *youtube.Service
 }
 
-type AMQPConfig struct {
-	URI          string
-	ExchangeName string
-	ExchangeType string
-	QueueName    string
-	Context      context.Context
-	Channel      *amqp.Channel
-	connection   *amqp.Connection
+type NATSConfig struct {
+	Host           string
+	Topic          string
+	NatsConnection *nats.Conn
 }
 
 type PluginConfig struct {
@@ -46,7 +43,7 @@ type PluginConfig struct {
 type Config struct {
 	Flags        Flags
 	YTConfig     YTConfig
-	AMQPConfig   AMQPConfig
+	NATSConfig   NATSConfig
 	PluginConfig PluginConfig
 }
 
@@ -89,14 +86,17 @@ func (cfg *Config) loadDotEnv() {
 		log.Fatalf("strconv error: %s", err)
 	}
 
-	// AMQP
-	cfg.AMQPConfig.URI = os.Getenv("AMQP_URI")
-	if cfg.AMQPConfig.URI == "" {
-		log.Fatalf("Please set the AMQP_URI environment variable and restart the app")
+	// NATS Host Name or IP
+	cfg.NATSConfig.Host = os.Getenv("NATS_HOST")
+	if cfg.NATSConfig.Host == "" {
+		log.Fatalf("Please set the NATS_HOST environment variable and restart the app")
 	}
-	cfg.AMQPConfig.ExchangeName = ""
-	cfg.AMQPConfig.ExchangeType = "direct"
-	cfg.AMQPConfig.QueueName = "notifier"
+
+	// NATS Topic Name
+	cfg.NATSConfig.Topic = os.Getenv("NATS_TOPIC")
+	if cfg.NATSConfig.Topic == "" {
+		log.Fatalf("Please set the NATS_TOPIC environment variable and restart the app")
+	}
 
 	// Lua Plugins
 	plugins := strings.ToLower(os.Getenv("PLUGINS"))
@@ -136,36 +136,18 @@ func (cfg *Config) createGoogleClients() {
 	log.Debugf("Created Google API clients successfully")
 }
 
-func (cfg *Config) loadAMQP() {
-	var err error
-
-	cfg.AMQPConfig.Context = context.Background()
-
-	cfg.AMQPConfig.connection, err = amqp.Dial(cfg.AMQPConfig.URI)
+func (cfg *Config) loadNats() {
+	// Connect to NATS server
+	nc, err := nats.Connect(cfg.NATSConfig.Host, nil, nats.PingInterval(20*time.Second), nats.MaxPingsOutstanding(5))
 	if err != nil {
-		log.Fatalf("Wasn't able to connect to the AMQP server: %s", err)
+		log.Fatalf("Could not connect to NATS server: %s", err)
 	}
-
-	cfg.AMQPConfig.Channel, err = cfg.AMQPConfig.connection.Channel()
-	if err != nil {
-		log.Fatalf("Wasn't able to create the AMQP channel: %s", err)
-	}
-
-	_, err = cfg.AMQPConfig.Channel.QueueDeclare(
-		cfg.AMQPConfig.QueueName, // queue name
-		true,                     // durable
-		false,                    // auto delete
-		false,                    // exclusive
-		false,                    // no wait
-		nil,                      // arguments
-	)
-	if err != nil {
-		log.Fatalf("Wasn't able to declare the AMQP queue: %s", err)
-	}
+	log.Infof("Successfully connected to NATS server: %s", cfg.NATSConfig.Host)
+	cfg.NATSConfig.NatsConnection = nc
 }
 
 func (cfg *Config) Initialize() {
 	cfg.loadDotEnv()
 	cfg.createGoogleClients()
-	cfg.loadAMQP()
+	cfg.loadNats()
 }

@@ -34,8 +34,6 @@ func StartYTThread(prefix string, f loopYT, cfg *config.Config, state *util.Stat
 			if err := L.DoFile(cfg.PluginConfig.PathToScript); err != nil {
 				log.Fatalf("Wasn't able to load the Lua script: %s", err)
 			}
-		} else {
-			L.Close()
 		}
 
 		timeout := 0
