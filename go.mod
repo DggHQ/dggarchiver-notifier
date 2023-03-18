@@ -4,8 +4,10 @@ go 1.19
 
 require (
 	github.com/DggHQ/dggarchiver-logger v0.0.0-20230224190431-3025eee98c2d
-	github.com/DggHQ/dggarchiver-model v0.0.0-20230224184635-bcc8612f448f
+	github.com/DggHQ/dggarchiver-model v0.0.0-20230318230033-3a73d838394c
 	github.com/apex/log v1.9.0
+	github.com/bogdanfinn/fhttp v0.5.19
+	github.com/bogdanfinn/tls-client v1.3.7
 	github.com/gocolly/colly/v2 v2.1.0
 	github.com/joho/godotenv v1.5.0
 	github.com/nats-io/nats.go v1.24.0
@@ -14,6 +16,7 @@ require (
 	golang.org/x/exp v0.0.0-20230203172020-98cc5a0785f9
 	golang.org/x/oauth2 v0.4.0
 	google.golang.org/api v0.109.0
+	gopkg.in/yaml.v3 v3.0.1
 	layeh.com/gopher-luar v1.0.10
 )
 
@@ -23,12 +26,14 @@ require (
 	github.com/PuerkitoBio/goquery v1.8.0 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
+	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/antchfx/htmlquery v1.3.0 // indirect
 	github.com/antchfx/xmlquery v1.3.15 // indirect
 	github.com/antchfx/xpath v1.2.3 // indirect
 	github.com/aws/aws-sdk-go v1.44.194 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bogdanfinn/utls v1.5.15 // indirect
 	github.com/cbroglie/mustache v1.4.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cheggaaa/pb/v3 v3.1.0 // indirect
@@ -43,6 +48,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
+	github.com/klauspost/compress v1.16.3 // indirect
 	github.com/lib/pq v1.10.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
@@ -61,14 +67,15 @@ require (
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
+	github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5 // indirect
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect
 	github.com/yuin/gluamapper v0.0.0-20150323120927-d836955830e7 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/crypto v0.6.0 // indirect
-	golang.org/x/net v0.6.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/crypto v0.7.0 // indirect
+	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230202175211-008b39050e57 // indirect
 	google.golang.org/grpc v1.52.3 // indirect

@@ -17,7 +17,7 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
-func ScrapeLivestreamID(config *config.Config) string {
+func ScrapeLivestreamID(cfg *config.Config) string {
 	var index int
 	var id string
 	c := colly.NewCollector()
@@ -34,13 +34,13 @@ func ScrapeLivestreamID(config *config.Config) string {
 		}
 	})
 
-	c.Visit(fmt.Sprintf("https://youtube.com/channel/%s/live?hl=en", config.YTConfig.YTChannel))
+	c.Visit(fmt.Sprintf("https://youtube.com/channel/%s/live?hl=en", cfg.Notifier.Platforms.YTConfig.Channel))
 
 	return id
 }
 
-func GetLivestreamID(config *config.Config, etag string) ([]*youtube.Video, string, error) {
-	resp, err := config.YTConfig.Service.Search.List([]string{"snippet"}).IfNoneMatch(etag).EventType("live").ChannelId(config.YTConfig.YTChannel).Type("video").Do()
+func GetLivestreamID(cfg *config.Config, etag string) ([]*youtube.Video, string, error) {
+	resp, err := cfg.Notifier.Platforms.YTConfig.Service.Search.List([]string{"snippet"}).IfNoneMatch(etag).EventType("live").ChannelId(cfg.Notifier.Platforms.YTConfig.Channel).Type("video").Do()
 	if err != nil {
 		if !googleapi.IsNotModified(err) {
 			return nil, etag, WrapWithYTError(err, "API", "Youtube API error")
@@ -50,7 +50,7 @@ func GetLivestreamID(config *config.Config, etag string) ([]*youtube.Video, stri
 	}
 
 	if len(resp.Items) > 0 {
-		id, _, err := GetVideoInfo(config, resp.Items[0].Id.VideoId, "")
+		id, _, err := GetVideoInfo(cfg, resp.Items[0].Id.VideoId, "")
 		if err != nil && !errors.Is(err, ErrIsNotModified) {
 			return id, resp.Etag, nil
 		}
@@ -60,8 +60,8 @@ func GetLivestreamID(config *config.Config, etag string) ([]*youtube.Video, stri
 	}
 }
 
-func GetVideoInfo(config *config.Config, id string, etag string) ([]*youtube.Video, string, error) {
-	resp, err := config.YTConfig.Service.Videos.List([]string{"snippet", "liveStreamingDetails"}).IfNoneMatch(etag).Id(id).Do()
+func GetVideoInfo(cfg *config.Config, id string, etag string) ([]*youtube.Video, string, error) {
+	resp, err := cfg.Notifier.Platforms.YTConfig.Service.Videos.List([]string{"snippet", "liveStreamingDetails"}).IfNoneMatch(etag).Id(id).Do()
 	if err != nil {
 		if !googleapi.IsNotModified(err) {
 			return nil, etag, WrapWithYTError(err, "", "Youtube API error")
@@ -73,8 +73,8 @@ func GetVideoInfo(config *config.Config, id string, etag string) ([]*youtube.Vid
 	return resp.Items, resp.Etag, nil
 }
 
-func GetLivestreamInfo(config *config.Config, id string, etag string) ([]*youtube.Video, string, error) {
-	resp, err := config.YTConfig.Service.Videos.List([]string{"liveStreamingDetails"}).IfNoneMatch(etag).Id(id).Do()
+func GetLivestreamInfo(cfg *config.Config, id string, etag string) ([]*youtube.Video, string, error) {
+	resp, err := cfg.Notifier.Platforms.YTConfig.Service.Videos.List([]string{"liveStreamingDetails"}).IfNoneMatch(etag).Id(id).Do()
 	if err != nil {
 		if !googleapi.IsNotModified(err) {
 			return nil, etag, WrapWithYTError(err, "", "Youtube API error")
@@ -93,12 +93,13 @@ func LoopApiLivestream(cfg *config.Config, state *util.State, L *lua.LState) err
 	}
 	state.SearchETag = etagEnd
 	state.Dump()
-	if len(vid) > 0 && !slices.Contains(state.SentVODs, vid[0].Id) {
+	if len(vid) > 0 && !slices.Contains(state.SentVODs, fmt.Sprintf("youtube:%s", vid[0].Id)) {
 		log.Infof("[YT] [API] Found a currently running stream with ID %s", vid[0].Id)
-		if cfg.PluginConfig.On {
+		if cfg.Notifier.PluginConfig.Enabled {
 			util.LuaCallReceiveFunction(L, vid[0].Id)
 		}
-		vod := &dggarchivermodel.YTVod{
+		vod := &dggarchivermodel.VOD{
+			Platform:  "youtube",
 			ID:        vid[0].Id,
 			PubTime:   vid[0].Snippet.PublishedAt,
 			Title:     vid[0].Snippet.Title,
@@ -107,22 +108,25 @@ func LoopApiLivestream(cfg *config.Config, state *util.State, L *lua.LState) err
 			Thumbnail: vid[0].Snippet.Thumbnails.Medium.Url,
 		}
 
+		state.CurrentStreams.YouTube = *vod
+
 		bytes, err := json.Marshal(vod)
 		if err != nil {
 			log.Fatalf("[YT] [API] Couldn't marshal VOD with ID %s into a JSON object: %v", vod.ID, err)
 		}
 
-		if err = cfg.NATSConfig.NatsConnection.Publish(fmt.Sprintf("%s.job", cfg.NATSConfig.Topic), bytes); err != nil {
+		if err = cfg.Notifier.NATSConfig.NatsConnection.Publish(fmt.Sprintf("%s.job", cfg.Notifier.NATSConfig.Topic), bytes); err != nil {
 			log.Errorf("[YT] [API] Wasn't able to send message with VOD with ID %s: %v", vod.ID, err)
 			return nil
 		}
 
-		if cfg.PluginConfig.On {
+		if cfg.Notifier.PluginConfig.Enabled {
 			util.LuaCallSendFunction(L, vod)
 		}
-		state.SentVODs = append(state.SentVODs, vod.ID)
+		state.SentVODs = append(state.SentVODs, fmt.Sprintf("youtube:%s", vod.ID))
 		state.Dump()
 	} else {
+		state.CurrentStreams.YouTube = dggarchivermodel.VOD{}
 		log.Infof("[YT] [API] No stream found")
 	}
 	return nil
@@ -130,41 +134,49 @@ func LoopApiLivestream(cfg *config.Config, state *util.State, L *lua.LState) err
 
 func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState) error {
 	id := ScrapeLivestreamID(cfg)
-	if id != "" && !slices.Contains(state.SentVODs, id) {
-		log.Infof("[YT] [SCRAPER] Found a currently running stream with ID %s", id)
-		if cfg.PluginConfig.On {
-			util.LuaCallReceiveFunction(L, id)
-		}
-		vid, _, err := GetVideoInfo(cfg, id, "")
-		if err != nil && !errors.Is(err, ErrIsNotModified) {
-			return err
-		}
+	if id != "" {
+		if !slices.Contains(state.SentVODs, fmt.Sprintf("youtube:%s", id)) {
+			log.Infof("[YT] [SCRAPER] Found a currently running stream with ID %s", id)
+			if cfg.Notifier.PluginConfig.Enabled {
+				util.LuaCallReceiveFunction(L, id)
+			}
+			vid, _, err := GetVideoInfo(cfg, id, "")
+			if err != nil && !errors.Is(err, ErrIsNotModified) {
+				return err
+			}
 
-		vod := &dggarchivermodel.YTVod{
-			ID:        vid[0].Id,
-			PubTime:   vid[0].Snippet.PublishedAt,
-			Title:     vid[0].Snippet.Title,
-			StartTime: vid[0].LiveStreamingDetails.ActualStartTime,
-			EndTime:   vid[0].LiveStreamingDetails.ActualEndTime,
-			Thumbnail: vid[0].Snippet.Thumbnails.Medium.Url,
-		}
+			vod := &dggarchivermodel.VOD{
+				Platform:  "youtube",
+				ID:        vid[0].Id,
+				PubTime:   vid[0].Snippet.PublishedAt,
+				Title:     vid[0].Snippet.Title,
+				StartTime: vid[0].LiveStreamingDetails.ActualStartTime,
+				EndTime:   vid[0].LiveStreamingDetails.ActualEndTime,
+				Thumbnail: vid[0].Snippet.Thumbnails.Medium.Url,
+			}
 
-		bytes, err := json.Marshal(vod)
-		if err != nil {
-			log.Fatalf("[YT] [SCRAPER] Couldn't marshal VOD with ID %s into a JSON object: %v", vod.ID, err)
-		}
+			state.CurrentStreams.YouTube = *vod
 
-		if err = cfg.NATSConfig.NatsConnection.Publish(fmt.Sprintf("%s.job", cfg.NATSConfig.Topic), bytes); err != nil {
-			log.Errorf("[YT] [SCRAPER] Wasn't able to send message with VOD with ID %s: %v", vod.ID, err)
-			return nil
-		}
+			bytes, err := json.Marshal(vod)
+			if err != nil {
+				log.Fatalf("[YT] [SCRAPER] Couldn't marshal VOD with ID %s into a JSON object: %v", vod.ID, err)
+			}
 
-		if cfg.PluginConfig.On {
-			util.LuaCallSendFunction(L, vod)
+			if err = cfg.Notifier.NATSConfig.NatsConnection.Publish(fmt.Sprintf("%s.job", cfg.Notifier.NATSConfig.Topic), bytes); err != nil {
+				log.Errorf("[YT] [SCRAPER] Wasn't able to send message with VOD with ID %s: %v", vod.ID, err)
+				return nil
+			}
+
+			if cfg.Notifier.PluginConfig.Enabled {
+				util.LuaCallSendFunction(L, vod)
+			}
+			state.SentVODs = append(state.SentVODs, fmt.Sprintf("youtube:%s", vod.ID))
+			state.Dump()
+		} else {
+			log.Infof("[YT] [SCRAPER] Stream with ID %s was already sent", id)
 		}
-		state.SentVODs = append(state.SentVODs, vod.ID)
-		state.Dump()
 	} else {
+		state.CurrentStreams.YouTube = dggarchivermodel.VOD{}
 		log.Infof("[YT] [SCRAPER] No stream found")
 	}
 	return nil

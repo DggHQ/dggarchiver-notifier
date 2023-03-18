@@ -4,8 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
+	"reflect"
 	"time"
 
 	log "github.com/DggHQ/dggarchiver-logger"
@@ -14,101 +13,149 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
+	"gopkg.in/yaml.v3"
 )
 
 type Flags struct {
 	Verbose bool
 }
 
+type KickConfig struct {
+	Enabled        bool
+	Channel        string `yaml:"channel"`
+	HealthCheck    string `yaml:"healthcheck"`
+	ScraperRefresh int    `yaml:"scraper_refresh"`
+}
+
+type RumbleConfig struct {
+	Enabled        bool
+	Channel        string `yaml:"channel"`
+	HealthCheck    string `yaml:"healthcheck"`
+	ScraperRefresh int    `yaml:"scraper_refresh"`
+}
+
 type YTConfig struct {
-	YTChannel     string
-	YTHealthCheck string
-	YTRefresh     int
-	YTAPIRefresh  int
-	GoogleCred    string
-	Service       *youtube.Service
+	Enabled        bool
+	Channel        string `yaml:"channel"`
+	HealthCheck    string `yaml:"healthcheck"`
+	ScraperRefresh int    `yaml:"scraper_refresh"`
+	APIRefresh     int    `yaml:"api_refresh"`
+	GoogleCred     string `yaml:"google_credentials"`
+	Service        *youtube.Service
 }
 
 type NATSConfig struct {
-	Host           string
-	Topic          string
+	Host           string `yaml:"host"`
+	Topic          string `yaml:"topic"`
 	NatsConnection *nats.Conn
 }
 
 type PluginConfig struct {
-	On           bool
-	PathToScript string
+	Enabled      bool   `yaml:"enabled"`
+	PathToPlugin string `yaml:"path"`
 }
 
 type Config struct {
-	Flags        Flags
-	YTConfig     YTConfig
-	NATSConfig   NATSConfig
-	PluginConfig PluginConfig
+	Notifier struct {
+		Verbose   bool
+		Platforms struct {
+			YTConfig     YTConfig     `yaml:"youtube"`
+			RumbleConfig RumbleConfig `yaml:"rumble"`
+			KickConfig   KickConfig   `yaml:"kick"`
+		}
+		PluginConfig PluginConfig `yaml:"plugins"`
+		NATSConfig   NATSConfig   `yaml:"nats"`
+	}
 }
 
-func (cfg *Config) loadDotEnv() {
+func (cfg *Config) checkPlatforms() bool {
+	var enabledPlatforms int
+	platformsValue := reflect.ValueOf(cfg.Notifier.Platforms)
+	platformsFields := reflect.VisibleFields(reflect.TypeOf(cfg.Notifier.Platforms))
+	for _, field := range platformsFields {
+		if platformsValue.FieldByName(field.Name).FieldByName("Enabled").Bool() {
+			enabledPlatforms++
+		}
+	}
+	return enabledPlatforms > 0
+}
+
+func (cfg *Config) loadConfig() {
 	var err error
 
-	log.Debugf("Loading environment variables")
+	log.Debugf("Loading the service configuration")
 	godotenv.Load()
 
-	// Flags
-	verbose := strings.ToLower(os.Getenv("VERBOSE"))
-	if verbose == "1" || verbose == "true" {
-		cfg.Flags.Verbose = true
+	configFile := os.Getenv("CONFIG")
+	if configFile == "" {
+		configFile = "config.yaml"
+	}
+	configBytes, err := os.ReadFile(configFile)
+	if err != nil {
+		log.Fatalf("Config load error: %s", err)
+	}
+
+	err = yaml.Unmarshal(configBytes, &cfg)
+	if err != nil {
+		log.Fatalf("YAML unmarshalling error: %s", err)
+	}
+
+	if !cfg.checkPlatforms() {
+		log.Fatalf("Please enable at least one platform and restart the service")
 	}
 
 	// YouTube
-	cfg.YTConfig.GoogleCred = os.Getenv("GOOGLE_CRED")
-	if cfg.YTConfig.GoogleCred == "" {
-		log.Fatalf("Please set the GOOGLE_CRED environment variable and restart the app")
-	}
-	cfg.YTConfig.YTChannel = os.Getenv("YT_CHANNEL")
-	if cfg.YTConfig.YTChannel == "" {
-		log.Fatalf("Please set the YT_CHANNEL environment variable and restart the app")
-	}
-	cfg.YTConfig.YTHealthCheck = os.Getenv("YT_HEALTHCHECK")
-	ytrefreshStr := os.Getenv("YT_REFRESH")
-	if ytrefreshStr == "" {
-		ytrefreshStr = "0"
-	}
-	cfg.YTConfig.YTRefresh, err = strconv.Atoi(ytrefreshStr)
-	if err != nil {
-		log.Fatalf("strconv error: %s", err)
-	}
-	ytapirefreshStr := os.Getenv("YT_API_REFRESH")
-	if ytapirefreshStr == "" {
-		ytapirefreshStr = "0"
-	}
-	cfg.YTConfig.YTAPIRefresh, err = strconv.Atoi(ytapirefreshStr)
-	if err != nil {
-		log.Fatalf("strconv error: %s", err)
+	if cfg.Notifier.Platforms.YTConfig.Enabled {
+		if cfg.Notifier.Platforms.YTConfig.GoogleCred == "" {
+			log.Fatalf("Please set the youtube:google_credentials config variable and restart the service")
+		}
+		if cfg.Notifier.Platforms.YTConfig.Channel == "" {
+			log.Fatalf("Please set the youtube:channel config variable and restart the service")
+		}
+		if cfg.Notifier.Platforms.YTConfig.ScraperRefresh == 0 && cfg.Notifier.Platforms.YTConfig.APIRefresh == 0 {
+			log.Fatalf("Please set the youtube:scraper_refresh or the youtube:api_refresh config variable and restart the service")
+		}
+		cfg.createGoogleClients()
 	}
 
-	// NATS Host Name or IP
-	cfg.NATSConfig.Host = os.Getenv("NATS_HOST")
-	if cfg.NATSConfig.Host == "" {
-		log.Fatalf("Please set the NATS_HOST environment variable and restart the app")
-	}
-
-	// NATS Topic Name
-	cfg.NATSConfig.Topic = os.Getenv("NATS_TOPIC")
-	if cfg.NATSConfig.Topic == "" {
-		log.Fatalf("Please set the NATS_TOPIC environment variable and restart the app")
-	}
-
-	// Lua Plugins
-	plugins := strings.ToLower(os.Getenv("PLUGINS"))
-	if plugins == "1" || plugins == "true" {
-		cfg.PluginConfig.On = true
-		cfg.PluginConfig.PathToScript = os.Getenv("LUA_PATH_TO_SCRIPT")
-		if cfg.PluginConfig.PathToScript == "" {
-			log.Fatalf("Please set the LUA_PATH_TO_SCRIPT environment variable and restart the app")
+	// Rumble
+	if cfg.Notifier.Platforms.RumbleConfig.Enabled {
+		if cfg.Notifier.Platforms.RumbleConfig.Channel == "" {
+			log.Fatalf("Please set the rumble:channel config variable and restart the service")
+		}
+		if cfg.Notifier.Platforms.RumbleConfig.ScraperRefresh == 0 {
+			log.Fatalf("Please set the rumble:scraper_refresh config variable and restart the service")
 		}
 	}
 
-	log.Debugf("Environment variables loaded successfully")
+	// Kick
+	if cfg.Notifier.Platforms.KickConfig.Enabled {
+		if cfg.Notifier.Platforms.KickConfig.Channel == "" {
+			log.Fatalf("Please set the kick:channel config variable and restart the service")
+		}
+		if cfg.Notifier.Platforms.KickConfig.ScraperRefresh == 0 {
+			log.Fatalf("Please set the kick:scraper_refresh config variable and restart the service")
+		}
+	}
+
+	// NATS Host Name or IP
+	if cfg.Notifier.NATSConfig.Host == "" {
+		log.Fatalf("Please set the nats:host config variable and restart the service")
+	}
+
+	// NATS Topic Name
+	if cfg.Notifier.NATSConfig.Topic == "" {
+		log.Fatalf("Please set the nats:topic config variable and restart the service")
+	}
+
+	// Lua Plugins
+	if cfg.Notifier.PluginConfig.Enabled {
+		if cfg.Notifier.PluginConfig.PathToPlugin == "" {
+			log.Fatalf("Please set the plugins:path config variable and restart the service")
+		}
+	}
+
+	log.Debugf("Config loaded successfully")
 }
 
 func (cfg *Config) createGoogleClients() {
@@ -116,7 +163,7 @@ func (cfg *Config) createGoogleClients() {
 
 	ctx := context.Background()
 
-	credpath := filepath.Join(".", cfg.YTConfig.GoogleCred)
+	credpath := filepath.Join(".", cfg.Notifier.Platforms.YTConfig.GoogleCred)
 	b, err := os.ReadFile(credpath)
 	if err != nil {
 		log.Fatalf("Unable to read client secret file: %v", err)
@@ -128,7 +175,7 @@ func (cfg *Config) createGoogleClients() {
 	}
 	client := googleCfg.Client(ctx)
 
-	cfg.YTConfig.Service, err = youtube.NewService(ctx, option.WithHTTPClient(client))
+	cfg.Notifier.Platforms.YTConfig.Service, err = youtube.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		log.Fatalf("Unable to retrieve YouTube client: %v", err)
 	}
@@ -138,16 +185,15 @@ func (cfg *Config) createGoogleClients() {
 
 func (cfg *Config) loadNats() {
 	// Connect to NATS server
-	nc, err := nats.Connect(cfg.NATSConfig.Host, nil, nats.PingInterval(20*time.Second), nats.MaxPingsOutstanding(5))
+	nc, err := nats.Connect(cfg.Notifier.NATSConfig.Host, nil, nats.PingInterval(20*time.Second), nats.MaxPingsOutstanding(5))
 	if err != nil {
 		log.Fatalf("Could not connect to NATS server: %s", err)
 	}
-	log.Infof("Successfully connected to NATS server: %s", cfg.NATSConfig.Host)
-	cfg.NATSConfig.NatsConnection = nc
+	log.Infof("Successfully connected to NATS server: %s", cfg.Notifier.NATSConfig.Host)
+	cfg.Notifier.NATSConfig.NatsConnection = nc
 }
 
 func (cfg *Config) Initialize() {
-	cfg.loadDotEnv()
-	cfg.createGoogleClients()
+	cfg.loadConfig()
 	cfg.loadNats()
 }

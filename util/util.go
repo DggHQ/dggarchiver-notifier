@@ -7,11 +7,17 @@ import (
 	"time"
 
 	log "github.com/DggHQ/dggarchiver-logger"
+	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
 )
 
 type State struct {
-	SearchETag string
-	SentVODs   []string
+	SearchETag     string
+	SentVODs       []string
+	CurrentStreams struct {
+		YouTube dggarchivermodel.VOD
+		Rumble  dggarchivermodel.VOD
+		Kick    dggarchivermodel.VOD
+	}
 }
 
 func (state *State) Dump() {

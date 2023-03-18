@@ -29,9 +29,9 @@ func StartYTThread(prefix string, f loopYT, cfg *config.Config, state *util.Stat
 	go func() {
 		L := lua.NewState()
 		defer L.Close()
-		if cfg.PluginConfig.On {
+		if cfg.Notifier.PluginConfig.Enabled {
 			luaLibs.Preload(L)
-			if err := L.DoFile(cfg.PluginConfig.PathToScript); err != nil {
+			if err := L.DoFile(cfg.Notifier.PluginConfig.PathToPlugin); err != nil {
 				log.Fatalf("Wasn't able to load the Lua script: %s", err)
 			}
 		}

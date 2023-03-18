@@ -1,0 +1,26 @@
+notifier:
+  platforms:
+    youtube:
+      enabled: yes
+      google_credentials: client_secret.json
+      channel: UCSJ4gkVC6NrvII8umztf0Ow
+      scraper_refresh: 5
+      api_refresh: 0
+      healthcheck: https://hc-ping.com/your-uuid-here
+    rumble:
+      enabled: yes
+      channel: Destiny
+      scraper_refresh: 5
+      healthcheck: https://hc-ping.com/your-uuid-here
+    kick:
+      enabled: yes
+      channel: destiny
+      scraper_refresh: 5
+      healthcheck: https://hc-ping.com/your-uuid-here
+  plugins:
+    enabled: no
+    path: ./notifier.lua
+  nats:
+    host: localhost
+    topic: archiver
+  verbose: no
