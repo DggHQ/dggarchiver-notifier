@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	log "github.com/DggHQ/dggarchiver-logger"
@@ -86,8 +85,6 @@ func ScrapeRumblePage(cfg *config.Config) *dggarchivermodel.VOD {
 			live := h.ChildAttr("span.video-item--live", "data-value")
 			if len(live) != 0 {
 				link := h.Attr("href")
-				shortUrl := strings.SplitN(link, "-", 2)[0]
-				publicID := strings.Replace(shortUrl, "/", "", 1)
 				embedData := GetRumbleEmbed(link)
 				embedID := embedData.EmbedID()
 				apiData := GetRumbleEmbedAPI(embedID)
@@ -95,7 +92,7 @@ func ScrapeRumblePage(cfg *config.Config) *dggarchivermodel.VOD {
 				startTimeString := startTime.Format(time.RFC3339)
 				vod = &dggarchivermodel.VOD{
 					Platform:    "rumble",
-					ID:          publicID,
+					ID:          embedID,
 					PlaybackURL: link,
 					Title:       embedData.Title,
 					StartTime:   startTimeString,
