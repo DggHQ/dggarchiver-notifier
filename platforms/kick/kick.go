@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
@@ -88,7 +89,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 					ID:          fmt.Sprintf("%d", stream.Livestream.ID),
 					PlaybackURL: stream.URL,
 					Title:       stream.Livestream.Title,
-					StartTime:   stream.Livestream.CreatedAt,
+					StartTime:   time.Now().Format(time.RFC3339),
 					EndTime:     "",
 					Thumbnail:   strings.Split(strings.Split(stream.Livestream.Thumbnail.URL, ",")[0], " ")[0],
 				}

@@ -87,15 +87,12 @@ func ScrapeRumblePage(cfg *config.Config) *dggarchivermodel.VOD {
 				link := h.Attr("href")
 				embedData := GetRumbleEmbed(link)
 				embedID := embedData.EmbedID()
-				apiData := GetRumbleEmbedAPI(embedID)
-				startTime := apiData.StringToTime()
-				startTimeString := startTime.Format(time.RFC3339)
 				vod = &dggarchivermodel.VOD{
 					Platform:    "rumble",
 					ID:          embedID,
 					PlaybackURL: link,
 					Title:       embedData.Title,
-					StartTime:   startTimeString,
+					StartTime:   time.Now().Format(time.RFC3339),
 					EndTime:     "",
 					Thumbnail:   embedData.Thumbnail,
 				}
