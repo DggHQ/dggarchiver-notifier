@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
@@ -89,7 +90,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 					Title:       stream.Livestream.Title,
 					StartTime:   stream.Livestream.CreatedAt,
 					EndTime:     "",
-					Thumbnail:   stream.Livestream.Thumbnail.URL,
+					Thumbnail:   strings.Split(strings.Split(stream.Livestream.Thumbnail.URL, ",")[0], " ")[0],
 				}
 
 				state.CurrentStreams.Kick = *vod
