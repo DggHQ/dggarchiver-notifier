@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
+	config "github.com/DggHQ/dggarchiver-config"
 	log "github.com/DggHQ/dggarchiver-logger"
-	"github.com/DggHQ/dggarchiver-notifier/config"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	luaLibs "github.com/vadv/gopher-lua-libs"
 	lua "github.com/yuin/gopher-lua"
@@ -46,9 +46,9 @@ func StartRumbleThread(prefix string, f loopRumble, cfg *config.Config, state *u
 	go func() {
 		L := lua.NewState()
 		defer L.Close()
-		if cfg.Notifier.PluginConfig.Enabled {
+		if cfg.Notifier.Plugins.Enabled {
 			luaLibs.Preload(L)
-			if err := L.DoFile(cfg.Notifier.PluginConfig.PathToPlugin); err != nil {
+			if err := L.DoFile(cfg.Notifier.Plugins.PathToPlugin); err != nil {
 				log.Fatalf("Wasn't able to load the Lua script: %s", err)
 			}
 		}

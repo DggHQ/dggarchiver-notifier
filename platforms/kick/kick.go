@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	config "github.com/DggHQ/dggarchiver-config"
 	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
-	"github.com/DggHQ/dggarchiver-notifier/config"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	http "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
@@ -37,7 +37,7 @@ func init() {
 }
 
 func ScrapeKickStream(cfg *config.Config) *KickAPI {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://kick.com/api/v1/channels/%s", cfg.Notifier.Platforms.KickConfig.Channel), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://kick.com/api/v1/channels/%s", cfg.Notifier.Platforms.Kick.Channel), nil)
 	if err != nil {
 		log.Fatalf("[Kick] [SCRAPER] Error creating a request: %s", err)
 	}
@@ -80,7 +80,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 		if !slices.Contains(state.SentVODs, fmt.Sprintf("kick:%d", stream.Livestream.ID)) {
 			if state.CurrentStreams.YouTube.ID == "" {
 				log.Infof("[Kick] [SCRAPER] Found a currently running stream with ID %d", stream.Livestream.ID)
-				if cfg.Notifier.PluginConfig.Enabled {
+				if cfg.Notifier.Plugins.Enabled {
 					util.LuaCallReceiveFunction(L, fmt.Sprintf("%d", stream.Livestream.ID))
 				}
 
@@ -101,12 +101,12 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 					log.Fatalf("[Kick] [SCRAPER] Couldn't marshal VOD with ID %s into a JSON object: %v", vod.ID, err)
 				}
 
-				if err = cfg.Notifier.NATSConfig.NatsConnection.Publish(fmt.Sprintf("%s.job", cfg.Notifier.NATSConfig.Topic), bytes); err != nil {
+				if err = cfg.NATS.NatsConnection.Publish(fmt.Sprintf("%s.job", cfg.NATS.Topic), bytes); err != nil {
 					log.Errorf("[Kick] [SCRAPER] Wasn't able to send message with VOD with ID %s: %v", vod.ID, err)
 					return nil
 				}
 
-				if cfg.Notifier.PluginConfig.Enabled {
+				if cfg.Notifier.Plugins.Enabled {
 					util.LuaCallSendFunction(L, vod)
 				}
 				state.SentVODs = append(state.SentVODs, fmt.Sprintf("kick:%s", vod.ID))

@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	config "github.com/DggHQ/dggarchiver-config"
 	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
-	"github.com/DggHQ/dggarchiver-notifier/config"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	"github.com/gocolly/colly/v2"
 	lua "github.com/yuin/gopher-lua"
@@ -90,7 +90,7 @@ func ScrapeRumblePage(cfg *config.Config) *dggarchivermodel.VOD {
 				vod = &dggarchivermodel.VOD{
 					Platform:    "rumble",
 					ID:          embedID,
-					PlaybackURL: link,
+					PlaybackURL: fmt.Sprintf("https://rumble.com%s", link),
 					Title:       embedData.Title,
 					StartTime:   time.Now().Format(time.RFC3339),
 					EndTime:     "",
@@ -100,7 +100,7 @@ func ScrapeRumblePage(cfg *config.Config) *dggarchivermodel.VOD {
 		})
 	})
 
-	c.Visit(fmt.Sprintf("https://rumble.com/c/%s", cfg.Notifier.Platforms.RumbleConfig.Channel))
+	c.Visit(fmt.Sprintf("https://rumble.com/c/%s", cfg.Notifier.Platforms.Rumble.Channel))
 
 	return vod
 }
@@ -111,7 +111,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 		if !slices.Contains(state.SentVODs, fmt.Sprintf("rumble:%s", vod.ID)) {
 			if state.CurrentStreams.YouTube.ID == "" {
 				log.Infof("[Rumble] [SCRAPER] Found a currently running stream with ID %s", vod.ID)
-				if cfg.Notifier.PluginConfig.Enabled {
+				if cfg.Notifier.Plugins.Enabled {
 					util.LuaCallReceiveFunction(L, vod.ID)
 				}
 
@@ -122,12 +122,12 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 					log.Fatalf("[Rumble] [SCRAPER] Couldn't marshal VOD with ID %s into a JSON object: %v", vod.ID, err)
 				}
 
-				if err = cfg.Notifier.NATSConfig.NatsConnection.Publish(fmt.Sprintf("%s.job", cfg.Notifier.NATSConfig.Topic), bytes); err != nil {
+				if err = cfg.NATS.NatsConnection.Publish(fmt.Sprintf("%s.job", cfg.NATS.Topic), bytes); err != nil {
 					log.Errorf("[Rumble] [SCRAPER] Wasn't able to send message with VOD with ID %s: %v", vod.ID, err)
 					return nil
 				}
 
-				if cfg.Notifier.PluginConfig.Enabled {
+				if cfg.Notifier.Plugins.Enabled {
 					util.LuaCallSendFunction(L, vod)
 				}
 				state.SentVODs = append(state.SentVODs, fmt.Sprintf("rumble:%s", vod.ID))
