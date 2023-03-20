@@ -1,4 +1,5 @@
 .env
+config.yaml
 client_secret*
 dggarchiver-notifier*
 data/

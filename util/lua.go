@@ -39,7 +39,7 @@ func LuaCallReceiveFunction(L *lua.LState, vod string) *LuaResponse {
 	return result
 }
 
-func LuaCallSendFunction(L *lua.LState, vod *dggarchivermodel.YTVod) *LuaResponse {
+func LuaCallSendFunction(L *lua.LState, vod *dggarchivermodel.VOD) *LuaResponse {
 	luaVOD := luar.New(L, vod)
 
 	result := &LuaResponse{}
