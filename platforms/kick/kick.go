@@ -76,7 +76,7 @@ func ScrapeKickStream(cfg *config.Config) *KickAPI {
 
 func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState) error {
 	stream := ScrapeKickStream(cfg)
-	if stream.Livestream.IsLive {
+	if stream != nil && stream.Livestream.IsLive {
 		if !slices.Contains(state.SentVODs, fmt.Sprintf("kick:%d", stream.Livestream.ID)) {
 			if state.CurrentStreams.YouTube.ID == "" {
 				log.Infof("[Kick] [SCRAPER] Found a currently running stream with ID %d", stream.Livestream.ID)

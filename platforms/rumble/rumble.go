@@ -107,7 +107,7 @@ func ScrapeRumblePage(cfg *config.Config) *dggarchivermodel.VOD {
 
 func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState) error {
 	vod := ScrapeRumblePage(cfg)
-	if vod.ID != "" {
+	if vod != nil {
 		if !slices.Contains(state.SentVODs, fmt.Sprintf("rumble:%s", vod.ID)) {
 			if state.CurrentStreams.YouTube.ID == "" {
 				log.Infof("[Rumble] [SCRAPER] Found a currently running stream with ID %s", vod.ID)
