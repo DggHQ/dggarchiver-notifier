@@ -1,8 +1,9 @@
 FROM golang:bullseye as builder
+ARG TARGETARCH
 LABEL builder=true multistage_tag="dggarchiver-notifier-builder"
 WORKDIR /app
 COPY . .
-RUN GOOS=linux GOARCH=amd64 go build
+RUN GOOS=linux GOARCH=${TARGETARCH} go build
 
 FROM debian:bullseye-slim
 WORKDIR /app
