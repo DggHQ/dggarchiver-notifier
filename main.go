@@ -4,10 +4,12 @@ import (
 	"sync"
 	"time"
 
+	config "github.com/DggHQ/dggarchiver-config"
 	log "github.com/DggHQ/dggarchiver-logger"
-	"github.com/DggHQ/dggarchiver-notifier/config"
+	"github.com/DggHQ/dggarchiver-notifier/platforms/kick"
+	"github.com/DggHQ/dggarchiver-notifier/platforms/rumble"
+	"github.com/DggHQ/dggarchiver-notifier/platforms/yt"
 	"github.com/DggHQ/dggarchiver-notifier/util"
-	"github.com/DggHQ/dggarchiver-notifier/yt"
 )
 
 func init() {
@@ -20,9 +22,9 @@ func init() {
 
 func main() {
 	cfg := config.Config{}
-	cfg.Initialize()
+	cfg.Load("notifier")
 
-	if cfg.Flags.Verbose {
+	if cfg.Notifier.Verbose {
 		log.SetLevel(log.DebugLevel)
 	}
 
@@ -33,18 +35,44 @@ func main() {
 	state.Load()
 
 	var wg sync.WaitGroup
-	log.Infof("Running the application in continuous mode, checking YT scraped page every %d minute(s) and YT API every %d minute(s)", cfg.YTConfig.YTRefresh, cfg.YTConfig.YTAPIRefresh)
+	log.Infof("Running the notifier service in continuous mode...")
 
-	if cfg.YTConfig.YTAPIRefresh != 0 {
-		ytApiSleepTime := time.Second * 60 * time.Duration(cfg.YTConfig.YTAPIRefresh)
-		wg.Add(1)
-		yt.StartYTThread("[YT] [API]", yt.LoopApiLivestream, &cfg, &state, ytApiSleepTime)
+	if cfg.Notifier.Platforms.YouTube.Enabled {
+		if cfg.Notifier.Platforms.YouTube.APIRefresh != 0 {
+			log.Infof("Checking YT API every %d minute(s)", cfg.Notifier.Platforms.YouTube.APIRefresh)
+			sleepTime := time.Second * 60 * time.Duration(cfg.Notifier.Platforms.YouTube.APIRefresh)
+			wg.Add(1)
+			yt.StartYTThread("[YT] [API]", yt.LoopApiLivestream, &cfg, &state, sleepTime)
+		}
+
+		if cfg.Notifier.Platforms.YouTube.ScraperRefresh != 0 {
+			log.Infof("Checking YT scraped page every %d minute(s)", cfg.Notifier.Platforms.YouTube.ScraperRefresh)
+			sleepTime := time.Second * 60 * time.Duration(cfg.Notifier.Platforms.YouTube.ScraperRefresh)
+			wg.Add(1)
+			yt.StartYTThread("[YT] [SCRAPER]", yt.LoopScrapedLivestream, &cfg, &state, sleepTime)
+		}
 	}
 
-	if cfg.YTConfig.YTRefresh != 0 {
-		ytSleepTime := time.Second * 60 * time.Duration(cfg.YTConfig.YTRefresh)
-		wg.Add(1)
-		yt.StartYTThread("[YT] [SCRAPER]", yt.LoopScrapedLivestream, &cfg, &state, ytSleepTime)
+	time.Sleep(1 * time.Second)
+
+	if cfg.Notifier.Platforms.Rumble.Enabled {
+		if cfg.Notifier.Platforms.Rumble.ScraperRefresh != 0 {
+			log.Infof("Checking Rumble scraped page every %d minute(s)", cfg.Notifier.Platforms.Rumble.ScraperRefresh)
+			sleepTime := time.Second * 60 * time.Duration(cfg.Notifier.Platforms.Rumble.ScraperRefresh)
+			wg.Add(1)
+			rumble.StartRumbleThread("[Rumble] [SCRAPER]", rumble.LoopScrapedLivestream, &cfg, &state, sleepTime)
+		}
+	}
+
+	time.Sleep(1 * time.Second)
+
+	if cfg.Notifier.Platforms.Kick.Enabled {
+		if cfg.Notifier.Platforms.Kick.ScraperRefresh != 0 {
+			log.Infof("Checking Kick scraped API every %d minute(s)", cfg.Notifier.Platforms.Kick.ScraperRefresh)
+			sleepTime := time.Second * 60 * time.Duration(cfg.Notifier.Platforms.Kick.ScraperRefresh)
+			wg.Add(1)
+			kick.StartKickThread("[Kick] [SCRAPER]", kick.LoopScrapedLivestream, &cfg, &state, sleepTime)
+		}
 	}
 
 	wg.Wait()
