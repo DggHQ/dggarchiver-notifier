@@ -109,7 +109,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 	vod := ScrapeRumblePage(cfg)
 	if vod != nil {
 		if !slices.Contains(state.SentVODs, fmt.Sprintf("rumble:%s", vod.ID)) {
-			if state.CurrentStreams.YouTube.ID == "" {
+			if state.CheckPriority("Rumble", cfg) {
 				log.Infof("[Rumble] [SCRAPER] Found a currently running stream with ID %s", vod.ID)
 				if cfg.Notifier.Plugins.Enabled {
 					util.LuaCallReceiveFunction(L, vod.ID)
@@ -133,7 +133,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 				state.SentVODs = append(state.SentVODs, fmt.Sprintf("rumble:%s", vod.ID))
 				state.Dump()
 			} else {
-				log.Infof("[Rumble] [SCRAPER] Stream with ID %s is being streamed on YouTube, skipping", vod.ID)
+				log.Infof("[Rumble] [SCRAPER] Stream with ID %s is being streamed on a different platform, skipping", vod.ID)
 			}
 		} else {
 			log.Infof("[Rumble] [SCRAPER] Stream with ID %s was already sent", vod.ID)

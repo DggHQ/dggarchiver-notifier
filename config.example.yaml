@@ -2,6 +2,7 @@ notifier:
   platforms:
     youtube:
       enabled: yes
+      restream_priority: 3
       google_credentials: client_secret.json
       channel: UCSJ4gkVC6NrvII8umztf0Ow
       scraper_refresh: 5
@@ -9,11 +10,13 @@ notifier:
       healthcheck: https://hc-ping.com/your-uuid-here
     rumble:
       enabled: yes
+      restream_priority: 3
       channel: Destiny
       scraper_refresh: 5
       healthcheck: https://hc-ping.com/your-uuid-here
     kick:
       enabled: yes
+      restream_priority: 1
       channel: destiny
       scraper_refresh: 5
       healthcheck: https://hc-ping.com/your-uuid-here
