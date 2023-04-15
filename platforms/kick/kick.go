@@ -78,7 +78,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 	stream := ScrapeKickStream(cfg)
 	if stream != nil && stream.Livestream.IsLive {
 		if !slices.Contains(state.SentVODs, fmt.Sprintf("kick:%d", stream.Livestream.ID)) {
-			if state.CurrentStreams.YouTube.ID == "" {
+			if state.CheckPriority("Kick", cfg) {
 				log.Infof("[Kick] [SCRAPER] Found a currently running stream with ID %d", stream.Livestream.ID)
 				if cfg.Notifier.Plugins.Enabled {
 					util.LuaCallReceiveFunction(L, fmt.Sprintf("%d", stream.Livestream.ID))
@@ -112,7 +112,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 				state.SentVODs = append(state.SentVODs, fmt.Sprintf("kick:%s", vod.ID))
 				state.Dump()
 			} else {
-				log.Infof("[Kick] [SCRAPER] Stream with ID %d is being streamed on YouTube, skipping", stream.Livestream.ID)
+				log.Infof("[Kick] [SCRAPER] Stream with ID %d is being streamed on a different platform, skipping", stream.Livestream.ID)
 			}
 		} else {
 			log.Infof("[Kick] [SCRAPER] Stream with ID %d was already sent", stream.Livestream.ID)
