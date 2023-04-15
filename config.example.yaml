@@ -10,7 +10,7 @@ notifier:
       healthcheck: https://hc-ping.com/your-uuid-here
     rumble:
       enabled: yes
-      restream_priority: 3
+      restream_priority: 2
       channel: Destiny
       scraper_refresh: 5
       healthcheck: https://hc-ping.com/your-uuid-here
