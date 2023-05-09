@@ -174,7 +174,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 				state.SentVODs = append(state.SentVODs, fmt.Sprintf("youtube:%s", vod.ID))
 				state.Dump()
 			} else {
-				log.Infof("[Rumble] [SCRAPER] Stream with ID %s is being streamed on a different platform, skipping", id)
+				log.Infof("[YT] [SCRAPER] Stream with ID %s is being streamed on a different platform, skipping", id)
 			}
 		} else {
 			log.Infof("[YT] [SCRAPER] Stream with ID %s was already sent", id)
