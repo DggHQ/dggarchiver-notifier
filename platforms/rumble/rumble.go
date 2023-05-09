@@ -80,27 +80,25 @@ func ScrapeRumblePage(cfg *config.Config) *dggarchivermodel.VOD {
 	// disable cookie handling
 	c.DisableCookies()
 
-	c.OnHTML("li.video-listing-entry", func(h *colly.HTMLElement) {
-		h.ForEach("a.video-item--a", func(_ int, h *colly.HTMLElement) {
-			live := h.ChildAttr("span.video-item--live", "data-value")
-			if len(live) != 0 {
-				link := h.Attr("href")
-				embedData := GetRumbleEmbed(link)
-				embedID := embedData.EmbedID()
-				vod = &dggarchivermodel.VOD{
-					Platform:    "rumble",
-					ID:          embedID,
-					PlaybackURL: fmt.Sprintf("https://rumble.com%s", link),
-					Title:       embedData.Title,
-					StartTime:   time.Now().Format(time.RFC3339),
-					EndTime:     "",
-					Thumbnail:   embedData.Thumbnail,
-				}
+	c.OnHTML("a.video-item--a", func(h *colly.HTMLElement) {
+		live := h.ChildAttr("span.video-item--live", "data-value")
+		if len(live) != 0 {
+			link := h.Attr("href")
+			embedData := GetRumbleEmbed(link)
+			embedID := embedData.EmbedID()
+			vod = &dggarchivermodel.VOD{
+				Platform:    "rumble",
+				ID:          embedID,
+				PlaybackURL: fmt.Sprintf("https://rumble.com%s", link),
+				Title:       embedData.Title,
+				StartTime:   time.Now().Format(time.RFC3339),
+				EndTime:     "",
+				Thumbnail:   embedData.Thumbnail,
 			}
-		})
+		}
 	})
 
-	c.Visit(fmt.Sprintf("https://rumble.com/c/%s", cfg.Notifier.Platforms.Rumble.Channel))
+	c.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=today", cfg.Notifier.Platforms.Rumble.Channel))
 
 	return vod
 }
