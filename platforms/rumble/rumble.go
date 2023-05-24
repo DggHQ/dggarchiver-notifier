@@ -80,27 +80,25 @@ func ScrapeRumblePage(cfg *config.Config) *dggarchivermodel.VOD {
 	// disable cookie handling
 	c.DisableCookies()
 
-	c.OnHTML("li.video-listing-entry", func(h *colly.HTMLElement) {
-		h.ForEach("a.video-item--a", func(_ int, h *colly.HTMLElement) {
-			live := h.ChildAttr("span.video-item--live", "data-value")
-			if len(live) != 0 {
-				link := h.Attr("href")
-				embedData := GetRumbleEmbed(link)
-				embedID := embedData.EmbedID()
-				vod = &dggarchivermodel.VOD{
-					Platform:    "rumble",
-					ID:          embedID,
-					PlaybackURL: fmt.Sprintf("https://rumble.com%s", link),
-					Title:       embedData.Title,
-					StartTime:   time.Now().Format(time.RFC3339),
-					EndTime:     "",
-					Thumbnail:   embedData.Thumbnail,
-				}
+	c.OnHTML("a.video-item--a", func(h *colly.HTMLElement) {
+		live := h.ChildAttr("span.video-item--live", "data-value")
+		if len(live) != 0 {
+			link := h.Attr("href")
+			embedData := GetRumbleEmbed(link)
+			embedID := embedData.EmbedID()
+			vod = &dggarchivermodel.VOD{
+				Platform:    "rumble",
+				ID:          embedID,
+				PlaybackURL: fmt.Sprintf("https://rumble.com%s", link),
+				Title:       embedData.Title,
+				StartTime:   time.Now().Format(time.RFC3339),
+				EndTime:     "",
+				Thumbnail:   embedData.Thumbnail,
 			}
-		})
+		}
 	})
 
-	c.Visit(fmt.Sprintf("https://rumble.com/c/%s", cfg.Notifier.Platforms.Rumble.Channel))
+	c.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=today", cfg.Notifier.Platforms.Rumble.Channel))
 
 	return vod
 }
@@ -109,7 +107,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 	vod := ScrapeRumblePage(cfg)
 	if vod != nil {
 		if !slices.Contains(state.SentVODs, fmt.Sprintf("rumble:%s", vod.ID)) {
-			if state.CurrentStreams.YouTube.ID == "" {
+			if state.CheckPriority("Rumble", cfg) {
 				log.Infof("[Rumble] [SCRAPER] Found a currently running stream with ID %s", vod.ID)
 				if cfg.Notifier.Plugins.Enabled {
 					util.LuaCallReceiveFunction(L, vod.ID)
@@ -133,7 +131,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 				state.SentVODs = append(state.SentVODs, fmt.Sprintf("rumble:%s", vod.ID))
 				state.Dump()
 			} else {
-				log.Infof("[Rumble] [SCRAPER] Stream with ID %s is being streamed on YouTube, skipping", vod.ID)
+				log.Infof("[Rumble] [SCRAPER] Stream with ID %s is being streamed on a different platform, skipping", vod.ID)
 			}
 		} else {
 			log.Infof("[Rumble] [SCRAPER] Stream with ID %s was already sent", vod.ID)

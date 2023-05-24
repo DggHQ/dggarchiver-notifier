@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"reflect"
 	"time"
 
+	config "github.com/DggHQ/dggarchiver-config"
 	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
 )
@@ -18,6 +20,24 @@ type State struct {
 		Rumble  dggarchivermodel.VOD
 		Kick    dggarchivermodel.VOD
 	} `json:"-"`
+}
+
+func (state *State) CheckPriority(platformName string, config *config.Config) bool {
+	stateValue := reflect.ValueOf(state.CurrentStreams)
+	platformsValue := reflect.ValueOf(config.Notifier.Platforms)
+	priority := platformsValue.FieldByName(platformName).FieldByName("Priority").Int()
+	if priority <= 1 {
+		return true
+	}
+	platformsFields := reflect.VisibleFields(reflect.TypeOf(config.Notifier.Platforms))
+	for _, field := range platformsFields {
+		if field.Name != platformName {
+			if platformsValue.FieldByName(field.Name).FieldByName("Priority").Int() < priority && stateValue.FieldByName(field.Name).FieldByName("ID").String() != "" {
+				return false
+			}
+		}
+	}
+	return false
 }
 
 func (state *State) Dump() {

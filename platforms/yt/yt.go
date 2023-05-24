@@ -136,42 +136,46 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 	id := ScrapeLivestreamID(cfg)
 	if id != "" {
 		if !slices.Contains(state.SentVODs, fmt.Sprintf("youtube:%s", id)) {
-			log.Infof("[YT] [SCRAPER] Found a currently running stream with ID %s", id)
-			if cfg.Notifier.Plugins.Enabled {
-				util.LuaCallReceiveFunction(L, id)
-			}
-			vid, _, err := GetVideoInfo(cfg, id, "")
-			if err != nil && !errors.Is(err, ErrIsNotModified) {
-				return err
-			}
+			if state.CheckPriority("YouTube", cfg) {
+				log.Infof("[YT] [SCRAPER] Found a currently running stream with ID %s", id)
+				if cfg.Notifier.Plugins.Enabled {
+					util.LuaCallReceiveFunction(L, id)
+				}
+				vid, _, err := GetVideoInfo(cfg, id, "")
+				if err != nil && !errors.Is(err, ErrIsNotModified) {
+					return err
+				}
 
-			vod := &dggarchivermodel.VOD{
-				Platform:  "youtube",
-				ID:        vid[0].Id,
-				PubTime:   vid[0].Snippet.PublishedAt,
-				Title:     vid[0].Snippet.Title,
-				StartTime: vid[0].LiveStreamingDetails.ActualStartTime,
-				EndTime:   vid[0].LiveStreamingDetails.ActualEndTime,
-				Thumbnail: vid[0].Snippet.Thumbnails.Medium.Url,
-			}
+				vod := &dggarchivermodel.VOD{
+					Platform:  "youtube",
+					ID:        vid[0].Id,
+					PubTime:   vid[0].Snippet.PublishedAt,
+					Title:     vid[0].Snippet.Title,
+					StartTime: vid[0].LiveStreamingDetails.ActualStartTime,
+					EndTime:   vid[0].LiveStreamingDetails.ActualEndTime,
+					Thumbnail: vid[0].Snippet.Thumbnails.Medium.Url,
+				}
 
-			state.CurrentStreams.YouTube = *vod
+				state.CurrentStreams.YouTube = *vod
 
-			bytes, err := json.Marshal(vod)
-			if err != nil {
-				log.Fatalf("[YT] [SCRAPER] Couldn't marshal VOD with ID %s into a JSON object: %v", vod.ID, err)
-			}
+				bytes, err := json.Marshal(vod)
+				if err != nil {
+					log.Fatalf("[YT] [SCRAPER] Couldn't marshal VOD with ID %s into a JSON object: %v", vod.ID, err)
+				}
 
-			if err = cfg.NATS.NatsConnection.Publish(fmt.Sprintf("%s.job", cfg.NATS.Topic), bytes); err != nil {
-				log.Errorf("[YT] [SCRAPER] Wasn't able to send message with VOD with ID %s: %v", vod.ID, err)
-				return nil
-			}
+				if err = cfg.NATS.NatsConnection.Publish(fmt.Sprintf("%s.job", cfg.NATS.Topic), bytes); err != nil {
+					log.Errorf("[YT] [SCRAPER] Wasn't able to send message with VOD with ID %s: %v", vod.ID, err)
+					return nil
+				}
 
-			if cfg.Notifier.Plugins.Enabled {
-				util.LuaCallSendFunction(L, vod)
+				if cfg.Notifier.Plugins.Enabled {
+					util.LuaCallSendFunction(L, vod)
+				}
+				state.SentVODs = append(state.SentVODs, fmt.Sprintf("youtube:%s", vod.ID))
+				state.Dump()
+			} else {
+				log.Infof("[YT] [SCRAPER] Stream with ID %s is being streamed on a different platform, skipping", id)
 			}
-			state.SentVODs = append(state.SentVODs, fmt.Sprintf("youtube:%s", vod.ID))
-			state.Dump()
 		} else {
 			log.Infof("[YT] [SCRAPER] Stream with ID %s was already sent", id)
 		}
