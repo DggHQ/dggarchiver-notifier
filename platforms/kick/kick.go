@@ -86,6 +86,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 
 				vod := &dggarchivermodel.VOD{
 					Platform:    "kick",
+					Downloader:  cfg.Notifier.Platforms.Kick.Downloader,
 					ID:          fmt.Sprintf("%d", stream.Livestream.ID),
 					PlaybackURL: stream.URL,
 					Title:       stream.Livestream.Title,

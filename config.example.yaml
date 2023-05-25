@@ -2,7 +2,10 @@ notifier:
   platforms:
     youtube:
       enabled: yes
-      restream_priority: 3
+      # optional field, will default to yt-dlp
+      # can be set to either 'yt-dlp' or 'ytarchive'
+      # downloader: ytarchive
+      restream_priority: 1
       google_credentials: client_secret.json
       channel: UCSJ4gkVC6NrvII8umztf0Ow
       scraper_refresh: 5
@@ -10,20 +13,23 @@ notifier:
       healthcheck: https://hc-ping.com/your-uuid-here
     rumble:
       enabled: yes
-      restream_priority: 2
+      # optional field, will default to yt-dlp
+      # can be set to either 'yt-dlp' or 'N_m3u8DL-RE'
+      # downloader: N_m3u8DL-RE
+      restream_priority: 3
       channel: Destiny
       scraper_refresh: 5
       healthcheck: https://hc-ping.com/your-uuid-here
     kick:
       enabled: yes
-      restream_priority: 1
+      # optional field, will default to yt-dlp
+      # can be set to either 'yt-dlp' or 'N_m3u8DL-RE'
+      # downloader: N_m3u8DL-RE
+      restream_priority: 2
       channel: destiny
       scraper_refresh: 5
       healthcheck: https://hc-ping.com/your-uuid-here
   plugins:
     enabled: no
     path: ./notifier.lua
-  nats:
-    host: localhost
-    topic: archiver
   verbose: no

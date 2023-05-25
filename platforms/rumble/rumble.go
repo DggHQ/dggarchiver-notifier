@@ -88,6 +88,7 @@ func ScrapeRumblePage(cfg *config.Config) *dggarchivermodel.VOD {
 			embedID := embedData.EmbedID()
 			vod = &dggarchivermodel.VOD{
 				Platform:    "rumble",
+				Downloader:  cfg.Notifier.Platforms.Rumble.Downloader,
 				ID:          embedID,
 				PlaybackURL: fmt.Sprintf("https://rumble.com%s", link),
 				Title:       embedData.Title,
