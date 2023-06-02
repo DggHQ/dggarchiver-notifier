@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	config "github.com/DggHQ/dggarchiver-config"
+	config "github.com/DggHQ/dggarchiver-config/notifier"
 	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
 	"github.com/DggHQ/dggarchiver-notifier/util"

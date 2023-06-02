@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	config "github.com/DggHQ/dggarchiver-config"
+	config "github.com/DggHQ/dggarchiver-config/notifier"
 	log "github.com/DggHQ/dggarchiver-logger"
 	"github.com/DggHQ/dggarchiver-notifier/platforms/kick"
 	"github.com/DggHQ/dggarchiver-notifier/platforms/rumble"
@@ -23,7 +23,7 @@ func init() {
 
 func main() {
 	cfg := config.Config{}
-	cfg.Load("notifier")
+	cfg.Load()
 
 	if cfg.Notifier.Verbose {
 		log.SetLevel(log.DebugLevel)

@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"time"
 
-	config "github.com/DggHQ/dggarchiver-config"
+	config "github.com/DggHQ/dggarchiver-config/notifier"
 	log "github.com/DggHQ/dggarchiver-logger"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	luaLibs "github.com/vadv/gopher-lua-libs"
