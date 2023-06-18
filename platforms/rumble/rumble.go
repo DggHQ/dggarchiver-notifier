@@ -76,11 +76,33 @@ func GetRumbleEmbed(url string) *RumbleOembed {
 
 func ScrapeRumblePage(cfg *config.Config) *dggarchivermodel.VOD {
 	var vod *dggarchivermodel.VOD
-	c := colly.NewCollector()
-	// disable cookie handling
-	c.DisableCookies()
+	c1 := colly.NewCollector()
+	c1.DisableCookies()
+	c2 := colly.NewCollector()
+	c2.DisableCookies()
 
-	c.OnHTML("html", func(h *colly.HTMLElement) {
+	c1.OnHTML("a.video-item--a", func(h *colly.HTMLElement) {
+		if vod == nil {
+			live := h.ChildAttr("span.video-item--live", "data-value")
+			if len(live) != 0 {
+				link := h.Attr("href")
+				embedData := GetRumbleEmbed(link)
+				embedID := embedData.EmbedID()
+				vod = &dggarchivermodel.VOD{
+					Platform:    "rumble",
+					Downloader:  cfg.Notifier.Platforms.Rumble.Downloader,
+					ID:          embedID,
+					PlaybackURL: fmt.Sprintf("https://rumble.com%s", link),
+					Title:       embedData.Title,
+					StartTime:   time.Now().Format(time.RFC3339),
+					EndTime:     "",
+					Thumbnail:   embedData.Thumbnail,
+				}
+			}
+		}
+	})
+
+	c2.OnHTML("html", func(h *colly.HTMLElement) {
 		if vod == nil {
 			liveDOM := h.DOM.Find(".watching-now")
 			if len(liveDOM.Nodes) != 0 {
@@ -102,7 +124,13 @@ func ScrapeRumblePage(cfg *config.Config) *dggarchivermodel.VOD {
 		}
 	})
 
-	c.Visit(fmt.Sprintf("https://rumble.com/%s/live", cfg.Notifier.Platforms.Rumble.Channel))
+	c1.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=today", cfg.Notifier.Platforms.Rumble.Channel))
+	c1.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=this-week", cfg.Notifier.Platforms.Rumble.Channel))
+	c1.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=this-month", cfg.Notifier.Platforms.Rumble.Channel))
+	c1.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=this-year", cfg.Notifier.Platforms.Rumble.Channel))
+	c1.Visit(fmt.Sprintf("https://rumble.com/c/%s", cfg.Notifier.Platforms.Rumble.Channel))
+
+	c2.Visit(fmt.Sprintf("https://rumble.com/%s/live", cfg.Notifier.Platforms.Rumble.Channel))
 
 	return vod
 }
