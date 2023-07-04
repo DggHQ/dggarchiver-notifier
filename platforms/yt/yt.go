@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	config "github.com/DggHQ/dggarchiver-config"
+	config "github.com/DggHQ/dggarchiver-config/notifier"
 	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
 	"github.com/DggHQ/dggarchiver-notifier/util"
@@ -147,13 +147,14 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 				}
 
 				vod := &dggarchivermodel.VOD{
-					Platform:  "youtube",
-					ID:        vid[0].Id,
-					PubTime:   vid[0].Snippet.PublishedAt,
-					Title:     vid[0].Snippet.Title,
-					StartTime: vid[0].LiveStreamingDetails.ActualStartTime,
-					EndTime:   vid[0].LiveStreamingDetails.ActualEndTime,
-					Thumbnail: vid[0].Snippet.Thumbnails.Medium.Url,
+					Platform:   "youtube",
+					Downloader: cfg.Notifier.Platforms.YouTube.Downloader,
+					ID:         vid[0].Id,
+					PubTime:    vid[0].Snippet.PublishedAt,
+					Title:      vid[0].Snippet.Title,
+					StartTime:  vid[0].LiveStreamingDetails.ActualStartTime,
+					EndTime:    vid[0].LiveStreamingDetails.ActualEndTime,
+					Thumbnail:  vid[0].Snippet.Thumbnails.Medium.Url,
 				}
 
 				state.CurrentStreams.YouTube = *vod
