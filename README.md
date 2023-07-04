@@ -16,7 +16,7 @@ The service can be extended with Lua plugins/scripts. An example can be found in
 
 If enabled, the service will call these functions from the specified ```.lua``` file:
 - ```OnReceive(vod)``` when a livestream has been found, where ```vod``` is the livestream ID
-- ```OnSend(vod)``` when a livestream has been sent to the ```archiver.job``` NATS topic, where ```vod``` is the livestream struct.
+- ```OnSend(vod)``` when a livestream has been sent to the ```archiver.job``` NATS topic, where ```vod``` is the livestream struct
 
 After the functions are done executing, the service will check the global ```ReceiveResponse``` and ```SendResponse``` variables for errors, before returning the struct. The struct's fields are:
 ```go
