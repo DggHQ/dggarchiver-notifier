@@ -3,7 +3,7 @@ module github.com/DggHQ/dggarchiver-notifier
 go 1.19
 
 require (
-	github.com/DggHQ/dggarchiver-config v0.0.0-20230602143501-44108ae119cb
+	github.com/DggHQ/dggarchiver-config v0.0.0-20231013160751-8ba63bb8cf34
 	github.com/DggHQ/dggarchiver-logger v0.0.0-20230224190431-3025eee98c2d
 	github.com/DggHQ/dggarchiver-model v0.0.0-20230525000132-7fa749218fac
 	github.com/apex/log v1.9.0

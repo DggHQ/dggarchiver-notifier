@@ -7,6 +7,8 @@ cloud.google.com/go/compute/metadata v0.2.3/go.mod h1:VAV5nSsACxMJvgaAuX6Pk2Aawl
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/DggHQ/dggarchiver-config v0.0.0-20230602143501-44108ae119cb h1:BOddI5HZVBah2f9n9hmX8VC9rniN40UF5Gm4tJvmuZA=
 github.com/DggHQ/dggarchiver-config v0.0.0-20230602143501-44108ae119cb/go.mod h1:HjVjaNH6oZHdn1BUW4b6f8HvC9VtsLMUCvkp/V0bplY=
+github.com/DggHQ/dggarchiver-config v0.0.0-20231013160751-8ba63bb8cf34 h1:/SQlBnLW55srHoiAS3vDs+lbhsNigBgSiibBota4jhs=
+github.com/DggHQ/dggarchiver-config v0.0.0-20231013160751-8ba63bb8cf34/go.mod h1:HjVjaNH6oZHdn1BUW4b6f8HvC9VtsLMUCvkp/V0bplY=
 github.com/DggHQ/dggarchiver-logger v0.0.0-20230224190431-3025eee98c2d h1:5/enw2AgKEr8lrqSfVeSd6rNJPcwOdVYVf7aoArwPqU=
 github.com/DggHQ/dggarchiver-logger v0.0.0-20230224190431-3025eee98c2d/go.mod h1:MaTChhaDRABk0Pnm5KC+VIsQKN783vhV4gWOyyZVp2I=
 github.com/DggHQ/dggarchiver-model v0.0.0-20230525000132-7fa749218fac h1:6HqVSJj+dA6slKyeCrB3Z+6a4RlcgIPTayl7azlckXg=

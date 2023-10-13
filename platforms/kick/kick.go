@@ -19,7 +19,7 @@ import (
 
 var kickHTTPClient tls_client.HttpClient
 
-func init() {
+func InitializeKickScraper(cfg *config.Config) {
 	var err error
 
 	jar := tls_client.NewCookieJar()
@@ -28,6 +28,10 @@ func init() {
 		tls_client.WithClientProfile(tls_client.Chrome_110),
 		tls_client.WithNotFollowRedirects(),
 		tls_client.WithCookieJar(jar),
+	}
+
+	if cfg.Notifier.Platforms.Kick.ProxyURL != "" {
+		options = append(options, tls_client.WithProxyUrl(cfg.Notifier.Platforms.Kick.ProxyURL))
 	}
 
 	kickHTTPClient, err = tls_client.NewHttpClient(tls_client.NewNoopLogger(), options...)

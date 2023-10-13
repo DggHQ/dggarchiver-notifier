@@ -86,6 +86,7 @@ func main() {
 				if cfg.Notifier.Platforms.Kick.ScraperRefresh != 0 {
 					log.Infof("Checking Kick scraped API every %d minute(s)", cfg.Notifier.Platforms.Kick.ScraperRefresh)
 					sleepTime := time.Second * 60 * time.Duration(cfg.Notifier.Platforms.Kick.ScraperRefresh)
+					kick.InitializeKickScraper(&cfg)
 					wg.Add(1)
 					kick.StartKickThread("[Kick] [SCRAPER]", kick.LoopScrapedLivestream, &cfg, &state, sleepTime)
 				}

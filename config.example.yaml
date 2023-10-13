@@ -23,6 +23,7 @@ notifier:
       channel: destiny # mandatory field, Kick channel ID
       scraper_refresh: 5 # scraper livestream check time in minutes
       healthcheck: https://hc-ping.com/your-uuid-here # healthcheck URL
+      proxy_url: http://proxy:80 # optional field, proxy url in case kick is being cringe
   plugins:
     enabled: no
     path: ./notifier.lua # path to the lua plugin
