@@ -40,6 +40,11 @@ jobs:
           for index in "${!tags[@]}"; do tags[$index]=$(echo ${tags[$index]} | sed 's/.*://'); done;
           echo "tags=$(IFS=,; echo "${tags[*]}")" >> "$GITHUB_OUTPUT";
 
+      - name: Normalize repository URL
+        run: |-
+          repo=${{ github.repository }}
+          echo "KO_DOCKER_REPO=${repo,,}" >> "$GITHUB_ENV";
+
       - name: Build and push Docker image
         run: |-
           ko build --base-import-paths --tags "${{ steps.bare-tags.outputs.tags }}" --image-label "${{ steps.meta.outputs.labels }}"
