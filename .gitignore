@@ -1,6 +1,6 @@
 .env
 config.yaml
 client_secret*
-dggarchiver-notifier*
+target/
 data/
 .vscode
