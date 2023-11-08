@@ -6,11 +6,15 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
@@ -29,7 +33,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           sep-labels: ','
           sep-tags: ','
 
@@ -42,9 +46,9 @@ jobs:
 
       - name: Normalize repository URL
         run: |-
-          repo=${{ github.repository }}
+          repo=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           echo "KO_DOCKER_REPO=${repo,,}" >> "$GITHUB_ENV";
 
       - name: Build and push Docker image
         run: |-
-          ko build --base-import-paths --tags "${{ steps.bare-tags.outputs.tags }}" --image-label "${{ steps.meta.outputs.labels }}"
+          ko build --bare --tags "${{ steps.bare-tags.outputs.tags }}" --image-label "${{ steps.meta.outputs.labels }}"
