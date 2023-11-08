@@ -7,6 +7,7 @@ import (
 
 	config "github.com/DggHQ/dggarchiver-config/notifier"
 	log "github.com/DggHQ/dggarchiver-logger"
+	"github.com/DggHQ/dggarchiver-notifier/platforms"
 	"github.com/DggHQ/dggarchiver-notifier/platforms/kick"
 	"github.com/DggHQ/dggarchiver-notifier/platforms/rumble"
 	"github.com/DggHQ/dggarchiver-notifier/platforms/yt"
@@ -56,43 +57,48 @@ func main() {
 			if cfg.Notifier.Platforms.YouTube.Enabled {
 				if cfg.Notifier.Platforms.YouTube.APIRefresh != 0 {
 					log.Infof("Checking YT API every %d minute(s)", cfg.Notifier.Platforms.YouTube.APIRefresh)
-					sleepTime := time.Second * 60 * time.Duration(cfg.Notifier.Platforms.YouTube.APIRefresh)
+					ytAPI := yt.NewAPI(&cfg, &state)
 					wg.Add(1)
-					yt.StartYTThread("[YT] [API]", yt.LoopAPILivestream, &cfg, &state, sleepTime)
+					platforms.LaunchLoop(&cfg, ytAPI)
 				}
 
 				if cfg.Notifier.Platforms.YouTube.ScraperRefresh != 0 {
 					log.Infof("Checking YT scraped page every %d minute(s)", cfg.Notifier.Platforms.YouTube.ScraperRefresh)
-					sleepTime := time.Second * 60 * time.Duration(cfg.Notifier.Platforms.YouTube.ScraperRefresh)
+					ytScraper := yt.NewScraper(&cfg, &state)
 					wg.Add(1)
-					yt.StartYTThread("[YT] [SCRAPER]", yt.LoopScrapedLivestream, &cfg, &state, sleepTime)
+					platforms.LaunchLoop(&cfg, ytScraper)
 				}
 			}
+
 			time.Sleep(1 * time.Second)
 		}
+
 		if platformsValue.FieldByName("Rumble").FieldByName("Priority").Int() == i || platformsValue.FieldByName("Rumble").FieldByName("Priority").Int() == 0 {
 			if cfg.Notifier.Platforms.Rumble.Enabled {
 				if cfg.Notifier.Platforms.Rumble.ScraperRefresh != 0 {
 					log.Infof("Checking Rumble scraped page every %d minute(s)", cfg.Notifier.Platforms.Rumble.ScraperRefresh)
-					sleepTime := time.Second * 60 * time.Duration(cfg.Notifier.Platforms.Rumble.ScraperRefresh)
+					r := rumble.New(&cfg, &state)
 					wg.Add(1)
-					rumble.StartRumbleThread("[Rumble] [SCRAPER]", rumble.LoopScrapedLivestream, &cfg, &state, sleepTime)
+					platforms.LaunchLoop(&cfg, r)
 				}
 			}
+
 			time.Sleep(1 * time.Second)
 		}
+
 		if platformsValue.FieldByName("Kick").FieldByName("Priority").Int() == i || platformsValue.FieldByName("Kick").FieldByName("Priority").Int() == 0 {
 			if cfg.Notifier.Platforms.Kick.Enabled {
 				if cfg.Notifier.Platforms.Kick.ScraperRefresh != 0 {
 					log.Infof("Checking Kick scraped API every %d minute(s)", cfg.Notifier.Platforms.Kick.ScraperRefresh)
-					sleepTime := time.Second * 60 * time.Duration(cfg.Notifier.Platforms.Kick.ScraperRefresh)
-					kick.InitializeKickScraper(&cfg)
+					k := kick.New(&cfg, &state)
 					wg.Add(1)
-					kick.StartKickThread("[Kick] [SCRAPER]", kick.LoopScrapedLivestream, &cfg, &state, sleepTime)
+					platforms.LaunchLoop(&cfg, k)
 				}
 			}
+
 			time.Sleep(1 * time.Second)
 		}
+
 		if platformPrioritySum == 0 {
 			break
 		}
