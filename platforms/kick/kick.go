@@ -40,7 +40,7 @@ func InitializeKickScraper(cfg *config.Config) {
 	}
 }
 
-func ScrapeKickStream(cfg *config.Config) *KickAPI {
+func ScrapeKickStream(cfg *config.Config) *API {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://kick.com/api/v1/channels/%s", cfg.Notifier.Platforms.Kick.Channel), nil)
 	if err != nil {
 		log.Fatalf("[Kick] [SCRAPER] Error creating a request: %s", err)
@@ -69,7 +69,7 @@ func ScrapeKickStream(cfg *config.Config) *KickAPI {
 		log.Errorf("[Kick] [SCRAPER] Error reading the response: %s", err)
 		return nil
 	}
-	var stream KickAPI
+	var stream API
 	err = json.Unmarshal(bytes, &stream)
 	if err != nil {
 		log.Errorf("[Kick] [SCRAPER] Error unmarshalling the response: %s", err)
@@ -78,14 +78,14 @@ func ScrapeKickStream(cfg *config.Config) *KickAPI {
 	return &stream
 }
 
-func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState) error {
+func LoopScrapedLivestream(cfg *config.Config, state *util.State, l *lua.LState) error {
 	stream := ScrapeKickStream(cfg)
 	if stream != nil && stream.Livestream.IsLive {
 		if !slices.Contains(state.SentVODs, fmt.Sprintf("kick:%d", stream.Livestream.ID)) {
 			if state.CheckPriority("Kick", cfg) {
 				log.Infof("[Kick] [SCRAPER] Found a currently running stream with ID %d", stream.Livestream.ID)
 				if cfg.Notifier.Plugins.Enabled {
-					util.LuaCallReceiveFunction(L, fmt.Sprintf("%d", stream.Livestream.ID))
+					util.LuaCallReceiveFunction(l, fmt.Sprintf("%d", stream.Livestream.ID))
 				}
 
 				vod := &dggarchivermodel.VOD{
@@ -112,7 +112,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 				}
 
 				if cfg.Notifier.Plugins.Enabled {
-					util.LuaCallSendFunction(L, vod)
+					util.LuaCallSendFunction(l, vod)
 				}
 				state.SentVODs = append(state.SentVODs, fmt.Sprintf("kick:%s", vod.ID))
 				state.Dump()

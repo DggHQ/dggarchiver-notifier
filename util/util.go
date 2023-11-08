@@ -42,7 +42,7 @@ func (state *State) CheckPriority(platformName string, config *config.Config) bo
 
 func (state *State) Dump() {
 	file, _ := json.MarshalIndent(state, "", "	")
-	err := os.WriteFile("./data/state.json", file, 0644)
+	err := os.WriteFile("./data/state.json", file, 0o644)
 	if err != nil {
 		log.Fatalf("State dump error: %s", err)
 	}
@@ -61,7 +61,7 @@ func (state *State) Load() {
 }
 
 func HealthCheck(url *string) {
-	var client = &http.Client{
+	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
