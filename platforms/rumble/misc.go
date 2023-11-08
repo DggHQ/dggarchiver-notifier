@@ -11,25 +11,25 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-type RumbleOembed struct {
+type OEmbed struct {
 	Title     string `json:"title"`
 	Duration  int    `json:"duration"`
 	Thumbnail string `json:"thumbnail_url"`
 	HTML      string `json:"html"`
 }
 
-func (data RumbleOembed) EmbedID() string {
+func (data OEmbed) EmbedID() string {
 	if data.HTML == "" {
 		return ""
 	}
 	return strings.SplitN(strings.SplitN(data.HTML, "https://rumble.com/embed/", 2)[1], "/", 2)[0]
 }
 
-type RumbleAPI struct {
+type API struct {
 	PubDate string `json:"pubDate"`
 }
 
-func (data RumbleAPI) StringToTime() *time.Time {
+func (data API) StringToTime() *time.Time {
 	if data.PubDate == "" {
 		return nil
 	}

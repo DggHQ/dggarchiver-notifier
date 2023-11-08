@@ -13,7 +13,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-type YTErrorWrapper struct {
+type ErrorWrapper struct {
 	Message string
 	Module  string
 	Err     error
@@ -21,7 +21,7 @@ type YTErrorWrapper struct {
 
 var ErrIsNotModified = errors.New("not modified")
 
-var ytRegexp *regexp.Regexp = regexp.MustCompile(`\/watch\?v=([^\"]*)`)
+var ytRegexp = regexp.MustCompile(`\/watch\?v=([^\"]*)`)
 
 type loopYT func(*config.Config, *util.State, *lua.LState) error
 
@@ -61,20 +61,20 @@ func StartYTThread(prefix string, f loopYT, cfg *config.Config, state *util.Stat
 	}()
 }
 
-func (err *YTErrorWrapper) Error() string {
+func (err *ErrorWrapper) Error() string {
 	if err.Module == "" {
 		return fmt.Sprintf("[YT] %s: %v", err.Message, err.Err)
-	} else {
-		return fmt.Sprintf("[YT] [%s] %s: %v", err.Module, err.Message, err.Err)
 	}
+
+	return fmt.Sprintf("[YT] [%s] %s: %v", err.Module, err.Message, err.Err)
 }
 
-func (err *YTErrorWrapper) Unwrap() error {
+func (err *ErrorWrapper) Unwrap() error {
 	return err.Err
 }
 
 func WrapWithYTError(err error, module string, message string) error {
-	return &YTErrorWrapper{
+	return &ErrorWrapper{
 		Message: message,
 		Module:  module,
 		Err:     err,

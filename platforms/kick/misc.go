@@ -10,7 +10,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-type KickAPI struct {
+type API struct {
 	URL        string `json:"playback_url"`
 	Livestream struct {
 		IsLive    bool   `json:"is_live"`

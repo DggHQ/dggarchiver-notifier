@@ -1,0 +1,38 @@
+linters:
+  enable:
+    - bidichk
+    - dupl
+    - errcheck
+    - gocritic
+    - gofmt
+    - gofumpt
+    - gosimple
+    - govet
+    - ineffassign
+    - nakedret
+    - revive
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - wastedassign
+    - unused
+  enable-all: false
+  disable-all: true
+  fast: false
+
+run:
+  go: "1.21"
+  timeout: 10m
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+severity:
+  default-severity: error
+  case-sensitive: false
+  rules:
+    - linters:
+        - unused
+      severity: warning
