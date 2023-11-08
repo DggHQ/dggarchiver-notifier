@@ -33,6 +33,13 @@ jobs:
           sep-labels: ','
           sep-tags: ','
 
+      - name: Get bare tags from metadata
+        id: bare-tags
+        run: |-
+          readarray -td, tags <<<"${{ steps.meta.outputs.tags }},"; unset 'tags[-1]'; declare -p tags;
+          for index in "${!tags[@]}"; do tags[$index]=$(echo ${tags[$index]} | sed 's/.*://'); done;
+          echo "tags=$(IFS=,; echo "${tags[*]}")" >> "$GITHUB_OUTPUT";
+
       - name: Build and push Docker image
         run: |-
-          ko build --base-import-paths --tags ${{ steps.meta.outputs.tags }} --image-label ${{ steps.meta.outputs.labels }}
+          ko build --base-import-paths --tags "${{ steps.bare-tags.outputs.tags }}" --image-label "${{ steps.meta.outputs.labels }}"
