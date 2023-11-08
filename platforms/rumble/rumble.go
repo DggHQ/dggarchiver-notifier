@@ -16,7 +16,7 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func GetRumbleEmbedAPI(embedID string) *RumbleAPI {
+func GetRumbleEmbedAPI(embedID string) *API {
 	response, err := http.Get(fmt.Sprintf("https://rumble.com/embedJS/u3/?request=video&ver=2&v=%s&ext={\"ad_count\":null}&ad_wt=0", embedID))
 	if err != nil {
 		log.Errorf("[Rumble] [SCRAPER] HTTP error during the Rumble API check (%s): %s", embedID, err)
@@ -35,7 +35,7 @@ func GetRumbleEmbedAPI(embedID string) *RumbleAPI {
 		return nil
 	}
 
-	data := &RumbleAPI{}
+	data := &API{}
 	err = json.Unmarshal(bytes, data)
 	if err != nil {
 		log.Errorf("[Rumble] [SCRAPER] Unmarshalling error during the Rumble API check (%s): %s", embedID, err)
@@ -45,7 +45,7 @@ func GetRumbleEmbedAPI(embedID string) *RumbleAPI {
 	return data
 }
 
-func GetRumbleEmbed(url string) *RumbleOembed {
+func GetRumbleEmbed(url string) *OEmbed {
 	response, err := http.Get(fmt.Sprintf("https://rumble.com/api/Media/oembed.json/?url=%s", url))
 	if err != nil {
 		log.Errorf("[Rumble] [SCRAPER] HTTP error during the OEmbed check (%s): %s", url, err)
@@ -64,7 +64,7 @@ func GetRumbleEmbed(url string) *RumbleOembed {
 		return nil
 	}
 
-	data := &RumbleOembed{}
+	data := &OEmbed{}
 	err = json.Unmarshal(bytes, data)
 	if err != nil {
 		log.Errorf("[Rumble] [SCRAPER] Unmarshalling error during the OEmbed check (%s): %s", url, err)
@@ -124,25 +124,25 @@ func ScrapeRumblePage(cfg *config.Config) *dggarchivermodel.VOD {
 		}
 	})
 
-	c1.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=today", cfg.Notifier.Platforms.Rumble.Channel))
-	c1.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=this-week", cfg.Notifier.Platforms.Rumble.Channel))
-	c1.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=this-month", cfg.Notifier.Platforms.Rumble.Channel))
-	c1.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=this-year", cfg.Notifier.Platforms.Rumble.Channel))
-	c1.Visit(fmt.Sprintf("https://rumble.com/c/%s", cfg.Notifier.Platforms.Rumble.Channel))
+	_ = c1.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=today", cfg.Notifier.Platforms.Rumble.Channel))
+	_ = c1.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=this-week", cfg.Notifier.Platforms.Rumble.Channel))
+	_ = c1.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=this-month", cfg.Notifier.Platforms.Rumble.Channel))
+	_ = c1.Visit(fmt.Sprintf("https://rumble.com/c/%s?date=this-year", cfg.Notifier.Platforms.Rumble.Channel))
+	_ = c1.Visit(fmt.Sprintf("https://rumble.com/c/%s", cfg.Notifier.Platforms.Rumble.Channel))
 
-	c2.Visit(fmt.Sprintf("https://rumble.com/%s/live", cfg.Notifier.Platforms.Rumble.Channel))
+	_ = c2.Visit(fmt.Sprintf("https://rumble.com/%s/live", cfg.Notifier.Platforms.Rumble.Channel))
 
 	return vod
 }
 
-func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState) error {
+func LoopScrapedLivestream(cfg *config.Config, state *util.State, l *lua.LState) error {
 	vod := ScrapeRumblePage(cfg)
 	if vod != nil {
 		if !slices.Contains(state.SentVODs, fmt.Sprintf("rumble:%s", vod.ID)) {
 			if state.CheckPriority("Rumble", cfg) {
 				log.Infof("[Rumble] [SCRAPER] Found a currently running stream with ID %s", vod.ID)
 				if cfg.Notifier.Plugins.Enabled {
-					util.LuaCallReceiveFunction(L, vod.ID)
+					util.LuaCallReceiveFunction(l, vod.ID)
 				}
 
 				state.CurrentStreams.Rumble = *vod
@@ -158,7 +158,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 				}
 
 				if cfg.Notifier.Plugins.Enabled {
-					util.LuaCallSendFunction(L, vod)
+					util.LuaCallSendFunction(l, vod)
 				}
 				state.SentVODs = append(state.SentVODs, fmt.Sprintf("rumble:%s", vod.ID))
 				state.Dump()

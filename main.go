@@ -45,7 +45,7 @@ func main() {
 	for _, field := range platformsFields {
 		if platformsValue.FieldByName(field.Name).FieldByName("Enabled").Bool() {
 			numOfEnabledPlatforms++
-			platformPrioritySum = platformPrioritySum + int(platformsValue.FieldByName(field.Name).FieldByName("Priority").Int())
+			platformPrioritySum += int(platformsValue.FieldByName(field.Name).FieldByName("Priority").Int())
 		}
 	}
 
@@ -58,7 +58,7 @@ func main() {
 					log.Infof("Checking YT API every %d minute(s)", cfg.Notifier.Platforms.YouTube.APIRefresh)
 					sleepTime := time.Second * 60 * time.Duration(cfg.Notifier.Platforms.YouTube.APIRefresh)
 					wg.Add(1)
-					yt.StartYTThread("[YT] [API]", yt.LoopApiLivestream, &cfg, &state, sleepTime)
+					yt.StartYTThread("[YT] [API]", yt.LoopAPILivestream, &cfg, &state, sleepTime)
 				}
 
 				if cfg.Notifier.Platforms.YouTube.ScraperRefresh != 0 {

@@ -34,7 +34,7 @@ func ScrapeLivestreamID(cfg *config.Config) string {
 		}
 	})
 
-	c.Visit(fmt.Sprintf("https://youtube.com/channel/%s/live?hl=en", cfg.Notifier.Platforms.YouTube.Channel))
+	_ = c.Visit(fmt.Sprintf("https://youtube.com/channel/%s/live?hl=en", cfg.Notifier.Platforms.YouTube.Channel))
 
 	return id
 }
@@ -44,9 +44,8 @@ func GetLivestreamID(cfg *config.Config, etag string) ([]*youtube.Video, string,
 	if err != nil {
 		if !googleapi.IsNotModified(err) {
 			return nil, etag, WrapWithYTError(err, "API", "Youtube API error")
-		} else {
-			return nil, etag, WrapWithYTError(ErrIsNotModified, "API", "Got a 304 Not Modified for livestream ID, returning an empty slice")
 		}
+		return nil, etag, WrapWithYTError(ErrIsNotModified, "API", "Got a 304 Not Modified for livestream ID, returning an empty slice")
 	}
 
 	if len(resp.Items) > 0 {
@@ -55,9 +54,9 @@ func GetLivestreamID(cfg *config.Config, etag string) ([]*youtube.Video, string,
 			return id, resp.Etag, nil
 		}
 		return id, resp.Etag, nil
-	} else {
-		return nil, resp.Etag, nil
 	}
+
+	return nil, resp.Etag, nil
 }
 
 func GetVideoInfo(cfg *config.Config, id string, etag string) ([]*youtube.Video, string, error) {
@@ -65,9 +64,8 @@ func GetVideoInfo(cfg *config.Config, id string, etag string) ([]*youtube.Video,
 	if err != nil {
 		if !googleapi.IsNotModified(err) {
 			return nil, etag, WrapWithYTError(err, "", "Youtube API error")
-		} else {
-			return nil, etag, WrapWithYTError(ErrIsNotModified, "", "Got a 304 Not Modified for full video info, returning an empty slice")
 		}
+		return nil, etag, WrapWithYTError(ErrIsNotModified, "", "Got a 304 Not Modified for full video info, returning an empty slice")
 	}
 
 	return resp.Items, resp.Etag, nil
@@ -78,15 +76,14 @@ func GetLivestreamInfo(cfg *config.Config, id string, etag string) ([]*youtube.V
 	if err != nil {
 		if !googleapi.IsNotModified(err) {
 			return nil, etag, WrapWithYTError(err, "", "Youtube API error")
-		} else {
-			return nil, etag, WrapWithYTError(ErrIsNotModified, "", "Got a 304 Not Modified for livestream info, returning an empty slice")
 		}
+		return nil, etag, WrapWithYTError(ErrIsNotModified, "", "Got a 304 Not Modified for livestream info, returning an empty slice")
 	}
 
 	return resp.Items, resp.Etag, nil
 }
 
-func LoopApiLivestream(cfg *config.Config, state *util.State, L *lua.LState) error {
+func LoopAPILivestream(cfg *config.Config, state *util.State, l *lua.LState) error {
 	vid, etagEnd, err := GetLivestreamID(cfg, state.SearchETag)
 	if err != nil && !errors.Is(err, ErrIsNotModified) {
 		return err
@@ -96,7 +93,7 @@ func LoopApiLivestream(cfg *config.Config, state *util.State, L *lua.LState) err
 	if len(vid) > 0 && !slices.Contains(state.SentVODs, fmt.Sprintf("youtube:%s", vid[0].Id)) {
 		log.Infof("[YT] [API] Found a currently running stream with ID %s", vid[0].Id)
 		if cfg.Notifier.Plugins.Enabled {
-			util.LuaCallReceiveFunction(L, vid[0].Id)
+			util.LuaCallReceiveFunction(l, vid[0].Id)
 		}
 		vod := &dggarchivermodel.VOD{
 			Platform:  "youtube",
@@ -121,7 +118,7 @@ func LoopApiLivestream(cfg *config.Config, state *util.State, L *lua.LState) err
 		}
 
 		if cfg.Notifier.Plugins.Enabled {
-			util.LuaCallSendFunction(L, vod)
+			util.LuaCallSendFunction(l, vod)
 		}
 		state.SentVODs = append(state.SentVODs, fmt.Sprintf("youtube:%s", vod.ID))
 		state.Dump()
@@ -132,14 +129,14 @@ func LoopApiLivestream(cfg *config.Config, state *util.State, L *lua.LState) err
 	return nil
 }
 
-func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState) error {
+func LoopScrapedLivestream(cfg *config.Config, state *util.State, l *lua.LState) error {
 	id := ScrapeLivestreamID(cfg)
 	if id != "" {
 		if !slices.Contains(state.SentVODs, fmt.Sprintf("youtube:%s", id)) {
 			if state.CheckPriority("YouTube", cfg) {
 				log.Infof("[YT] [SCRAPER] Found a currently running stream with ID %s", id)
 				if cfg.Notifier.Plugins.Enabled {
-					util.LuaCallReceiveFunction(L, id)
+					util.LuaCallReceiveFunction(l, id)
 				}
 				vid, _, err := GetVideoInfo(cfg, id, "")
 				if err != nil && !errors.Is(err, ErrIsNotModified) {
@@ -170,7 +167,7 @@ func LoopScrapedLivestream(cfg *config.Config, state *util.State, L *lua.LState)
 				}
 
 				if cfg.Notifier.Plugins.Enabled {
-					util.LuaCallSendFunction(L, vod)
+					util.LuaCallSendFunction(l, vod)
 				}
 				state.SentVODs = append(state.SentVODs, fmt.Sprintf("youtube:%s", vod.ID))
 				state.Dump()
