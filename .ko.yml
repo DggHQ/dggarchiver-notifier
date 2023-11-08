@@ -1,0 +1,14 @@
+defaultPlatforms:
+  - linux/amd64
+  - linux/arm64
+
+builds:
+  - id: dggarchiver-notifier
+    main: ./main.go
+    flags:
+    - -tags
+    - netgo
+    - -trimpath
+    ldflags:
+    - -s -w
+    - -extldflags "-static"
