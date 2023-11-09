@@ -131,6 +131,8 @@ func (p *Scraper) CheckLivestream(l *lua.LState) error {
 		log.Infof("[YT] [SCRAPER] No stream found")
 	}
 
+	util.HealthCheck(p.cfg.Notifier.Platforms.YouTube.HealthCheck)
+
 	return nil
 }
 

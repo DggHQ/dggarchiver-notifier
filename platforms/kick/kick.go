@@ -133,6 +133,8 @@ func (p *Platform) CheckLivestream(l *lua.LState) error {
 		log.Infof("[Kick] [SCRAPER] No stream found")
 	}
 
+	util.HealthCheck(p.cfg.Notifier.Platforms.Kick.HealthCheck)
+
 	return nil
 }
 

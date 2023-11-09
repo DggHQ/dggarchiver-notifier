@@ -102,6 +102,8 @@ func (p *API) CheckLivestream(l *lua.LState) error {
 		log.Infof("[YT] [API] No stream found")
 	}
 
+	util.HealthCheck(p.cfg.Notifier.Platforms.YouTube.HealthCheck)
+
 	return nil
 }
 

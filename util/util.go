@@ -7,12 +7,16 @@ import (
 	log "github.com/DggHQ/dggarchiver-logger"
 )
 
-func HealthCheck(url *string) {
-	client := &http.Client{
-		Timeout: 10 * time.Second,
+var healthCheckClient = &http.Client{
+	Timeout: 10 * time.Second,
+}
+
+func HealthCheck(url string) {
+	if url == "" {
+		return
 	}
 
-	_, err := client.Head(*url)
+	_, err := healthCheckClient.Head(url)
 	if err != nil {
 		log.Errorf("HealthCheck error: %s", err)
 	}

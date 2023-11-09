@@ -154,6 +154,9 @@ func (p *Platform) CheckLivestream(l *lua.LState) error {
 		p.state.CurrentStreams.Rumble = dggarchivermodel.VOD{}
 		log.Infof("[Rumble] [SCRAPER] No stream found")
 	}
+
+	util.HealthCheck(p.cfg.Notifier.Platforms.Rumble.HealthCheck)
+
 	return nil
 }
 
