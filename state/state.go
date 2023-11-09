@@ -2,12 +2,12 @@ package state
 
 import (
 	"encoding/json"
-	"os"
 	"reflect"
 
 	config "github.com/DggHQ/dggarchiver-config/notifier"
 	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
+	"github.com/nats-io/nats.go"
 )
 
 type State struct {
@@ -18,12 +18,31 @@ type State struct {
 		Rumble  dggarchivermodel.VOD
 		Kick    dggarchivermodel.VOD
 	} `json:"-"`
+	kv nats.KeyValue
 }
 
-func New() State {
+func New(cfg *config.Config) State {
+	var err error
+
+	var js nats.JetStreamContext
+	js, _ = cfg.NATS.NatsConnection.JetStream()
+
+	var kv nats.KeyValue
+	kv, err = js.KeyValue("dggarchiver-notifier")
+	if err != nil {
+		kv, err = js.CreateKeyValue(&nats.KeyValueConfig{
+			Bucket:      "dggarchiver-notifier",
+			Description: "KV store for the dggarchiver-notifier service.",
+		})
+		if err != nil {
+			log.Fatalf("unable to create kv store: %s", err)
+		}
+	}
+
 	return State{
 		SearchETag: "",
 		SentVODs:   make([]string, 0),
+		kv:         kv,
 	}
 }
 
@@ -46,20 +65,23 @@ func (state *State) CheckPriority(platformName string, config *config.Config) bo
 }
 
 func (state *State) Dump() {
-	file, _ := json.MarshalIndent(state, "", "	")
-	err := os.WriteFile("./data/state.json", file, 0o644)
+	b, err := json.Marshal(state)
+	if err != nil {
+		log.Fatalf("State dump error: %s", err)
+	}
+	_, err = state.kv.Put("state", b)
 	if err != nil {
 		log.Fatalf("State dump error: %s", err)
 	}
 }
 
 func (state *State) Load() {
-	bytes, err := os.ReadFile("./data/state.json")
+	e, err := state.kv.Get("state")
 	if err != nil {
 		log.Errorf("State load error, skipping load: %s", err)
 		return
 	}
-	err = json.Unmarshal(bytes, state)
+	err = json.Unmarshal(e.Value(), state)
 	if err != nil {
 		log.Fatalf("State unmarshal error: %s", err)
 	}

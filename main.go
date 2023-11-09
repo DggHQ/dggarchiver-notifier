@@ -25,7 +25,7 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	state := state.New()
+	state := state.New(&cfg)
 	state.Load()
 
 	log.Infof("Running the notifier service in continuous mode...")
