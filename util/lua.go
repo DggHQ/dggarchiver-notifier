@@ -1,8 +1,8 @@
 package util
 
 import (
+	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
-	"github.com/apex/log"
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
 )
