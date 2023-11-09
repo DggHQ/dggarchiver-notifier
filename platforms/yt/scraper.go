@@ -11,6 +11,7 @@ import (
 	config "github.com/DggHQ/dggarchiver-config/notifier"
 	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
+	"github.com/DggHQ/dggarchiver-notifier/state"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	"github.com/gocolly/colly/v2"
 	lua "github.com/yuin/gopher-lua"
@@ -24,13 +25,13 @@ type Scraper struct {
 	index     int
 	idChan    chan string
 	cfg       *config.Config
-	state     *util.State
+	state     *state.State
 	prefix    string
 	sleepTime time.Duration
 }
 
 // New returns a new YouTube Scraper platform struct
-func NewScraper(cfg *config.Config, state *util.State) *Scraper {
+func NewScraper(cfg *config.Config, state *state.State) *Scraper {
 	c := colly.NewCollector()
 	// disable cookie handling to bypass youtube consent screen
 	c.DisableCookies()

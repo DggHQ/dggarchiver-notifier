@@ -9,6 +9,7 @@ import (
 	config "github.com/DggHQ/dggarchiver-config/notifier"
 	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
+	"github.com/DggHQ/dggarchiver-notifier/state"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	"github.com/gocolly/colly/v2"
 	lua "github.com/yuin/gopher-lua"
@@ -21,13 +22,13 @@ type Platform struct {
 	c1        *colly.Collector
 	c2        *colly.Collector
 	cfg       *config.Config
-	state     *util.State
+	state     *state.State
 	prefix    string
 	sleepTime time.Duration
 }
 
 // New returns a new Rumble platform struct
-func New(cfg *config.Config, state *util.State) *Platform {
+func New(cfg *config.Config, state *state.State) *Platform {
 	vodChan := make(chan *dggarchivermodel.VOD)
 
 	c1 := colly.NewCollector()

@@ -10,6 +10,7 @@ import (
 	config "github.com/DggHQ/dggarchiver-config/notifier"
 	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
+	"github.com/DggHQ/dggarchiver-notifier/state"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	http "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
@@ -20,7 +21,7 @@ import (
 type Platform struct {
 	httpClient tls_client.HttpClient
 	cfg        *config.Config
-	state      *util.State
+	state      *state.State
 	prefix     string
 	sleepTime  time.Duration
 }
@@ -40,7 +41,7 @@ type api struct {
 }
 
 // New returns a new Kick platform struct
-func New(cfg *config.Config, state *util.State) *Platform {
+func New(cfg *config.Config, state *state.State) *Platform {
 	var err error
 
 	p := Platform{

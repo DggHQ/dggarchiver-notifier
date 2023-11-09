@@ -9,6 +9,7 @@ import (
 	config "github.com/DggHQ/dggarchiver-config/notifier"
 	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
+	"github.com/DggHQ/dggarchiver-notifier/state"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	lua "github.com/yuin/gopher-lua"
 	"golang.org/x/exp/slices"
@@ -18,13 +19,13 @@ import (
 
 type API struct {
 	cfg       *config.Config
-	state     *util.State
+	state     *state.State
 	prefix    string
 	sleepTime time.Duration
 }
 
 // New returns a new YouTube API platform struct
-func NewAPI(cfg *config.Config, state *util.State) *API {
+func NewAPI(cfg *config.Config, state *state.State) *API {
 	p := API{
 		cfg:       cfg,
 		state:     state,
