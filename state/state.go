@@ -2,10 +2,11 @@ package state
 
 import (
 	"encoding/json"
+	"log/slog"
+	"os"
 	"reflect"
 
 	config "github.com/DggHQ/dggarchiver-config/notifier"
-	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
 	"github.com/nats-io/nats.go"
 )
@@ -35,7 +36,8 @@ func New(cfg *config.Config) State {
 			Description: "KV store for the dggarchiver-notifier service.",
 		})
 		if err != nil {
-			log.Fatalf("unable to create kv store: %s", err)
+			slog.Error("unable to create kv store", slog.Any("err", err))
+			os.Exit(1)
 		}
 	}
 
@@ -67,22 +69,25 @@ func (state *State) CheckPriority(platformName string, config *config.Config) bo
 func (state *State) Dump() {
 	b, err := json.Marshal(state)
 	if err != nil {
-		log.Fatalf("State dump error: %s", err)
+		slog.Error("unable to marshal state", slog.Any("err", err))
+		os.Exit(1)
 	}
 	_, err = state.kv.Put("state", b)
 	if err != nil {
-		log.Fatalf("State dump error: %s", err)
+		slog.Error("unable to put state", slog.Any("err", err))
+		os.Exit(1)
 	}
 }
 
 func (state *State) Load() {
 	e, err := state.kv.Get("state")
 	if err != nil {
-		log.Errorf("State load error, skipping load: %s", err)
+		slog.Warn("unable to load state", slog.Any("err", err))
 		return
 	}
 	err = json.Unmarshal(e.Value(), state)
 	if err != nil {
-		log.Fatalf("State unmarshal error: %s", err)
+		slog.Error("unable to unmarshal state", slog.Any("err", err))
+		os.Exit(1)
 	}
 }

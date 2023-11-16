@@ -38,7 +38,7 @@ func wrapWithYTError(err error, module string, message string) error {
 }
 
 func getVideoInfo(cfg *config.Config, id string, etag string) ([]*youtube.Video, string, error) {
-	resp, err := cfg.Notifier.Platforms.YouTube.Service.Videos.List([]string{"snippet", "liveStreamingDetails"}).IfNoneMatch(etag).Id(id).Do()
+	resp, err := cfg.Platforms.YouTube.Service.Videos.List([]string{"snippet", "liveStreamingDetails"}).IfNoneMatch(etag).Id(id).Do()
 	if err != nil {
 		if !googleapi.IsNotModified(err) {
 			return nil, etag, wrapWithYTError(err, "", "Youtube API error")

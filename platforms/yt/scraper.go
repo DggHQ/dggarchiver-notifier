@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
 
 	config "github.com/DggHQ/dggarchiver-config/notifier"
-	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
 	"github.com/DggHQ/dggarchiver-notifier/state"
 	"github.com/DggHQ/dggarchiver-notifier/util"
@@ -26,7 +26,7 @@ type Scraper struct {
 	idChan    chan string
 	cfg       *config.Config
 	state     *state.State
-	prefix    string
+	prefix    slog.Attr
 	sleepTime time.Duration
 }
 
@@ -40,12 +40,15 @@ func NewScraper(cfg *config.Config, state *state.State) *Scraper {
 	idChan := make(chan string)
 
 	p := Scraper{
-		c:         c,
-		idChan:    idChan,
-		cfg:       cfg,
-		state:     state,
-		prefix:    "[YT] [SCRAPER]",
-		sleepTime: time.Second * 60 * time.Duration(cfg.Notifier.Platforms.YouTube.ScraperRefresh),
+		c:      c,
+		idChan: idChan,
+		cfg:    cfg,
+		state:  state,
+		prefix: slog.Group("platform",
+			slog.String("name", "youtube"),
+			slog.String("method", "scrape"),
+		),
+		sleepTime: time.Second * 60 * time.Duration(cfg.Platforms.YouTube.ScraperRefresh),
 	}
 
 	c.OnResponse(func(r *colly.Response) {
@@ -65,8 +68,8 @@ func NewScraper(cfg *config.Config, state *state.State) *Scraper {
 	return &p
 }
 
-// GetPrefix returns a log prefix for platform p
-func (p *Scraper) GetPrefix() string {
+// GetPrefix returns a slog.Attr group for platform p
+func (p *Scraper) GetPrefix() slog.Attr {
 	return p.prefix
 }
 
@@ -83,8 +86,11 @@ func (p *Scraper) CheckLivestream(l *lua.LState) error {
 	if id != "" {
 		if !slices.Contains(p.state.SentVODs, fmt.Sprintf("youtube:%s", id)) {
 			if p.state.CheckPriority("YouTube", p.cfg) {
-				log.Infof("[YT] [SCRAPER] Found a currently running stream with ID %s", id)
-				if p.cfg.Notifier.Plugins.Enabled {
+				slog.Info("stream found",
+					p.prefix,
+					slog.String("id", id),
+				)
+				if p.cfg.Plugins.Enabled {
 					util.LuaCallReceiveFunction(l, id)
 				}
 				vid, _, err := getVideoInfo(p.cfg, id, "")
@@ -94,7 +100,7 @@ func (p *Scraper) CheckLivestream(l *lua.LState) error {
 
 				vod := &dggarchivermodel.VOD{
 					Platform:   "youtube",
-					Downloader: p.cfg.Notifier.Platforms.YouTube.Downloader,
+					Downloader: p.cfg.Platforms.YouTube.Downloader,
 					ID:         vid[0].Id,
 					PubTime:    vid[0].Snippet.PublishedAt,
 					Title:      vid[0].Snippet.Title,
@@ -107,37 +113,54 @@ func (p *Scraper) CheckLivestream(l *lua.LState) error {
 
 				bytes, err := json.Marshal(vod)
 				if err != nil {
-					log.Fatalf("[YT] [SCRAPER] Couldn't marshal VOD with ID %s into a JSON object: %v", vod.ID, err)
-				}
-
-				if err = p.cfg.NATS.NatsConnection.Publish(fmt.Sprintf("%s.job", p.cfg.NATS.Topic), bytes); err != nil {
-					log.Errorf("[YT] [SCRAPER] Wasn't able to send message with VOD with ID %s: %v", vod.ID, err)
+					slog.Error("unable to marshal vod",
+						p.prefix,
+						slog.String("id", vod.ID),
+						slog.Any("err", err),
+					)
 					return nil
 				}
 
-				if p.cfg.Notifier.Plugins.Enabled {
+				if err = p.cfg.NATS.NatsConnection.Publish(fmt.Sprintf("%s.job", p.cfg.NATS.Topic), bytes); err != nil {
+					slog.Error("unable to publish message",
+						p.prefix,
+						slog.String("id", vod.ID),
+						slog.Any("err", err),
+					)
+					return nil
+				}
+
+				if p.cfg.Plugins.Enabled {
 					util.LuaCallSendFunction(l, vod)
 				}
 				p.state.SentVODs = append(p.state.SentVODs, fmt.Sprintf("youtube:%s", vod.ID))
 				p.state.Dump()
 			} else {
-				log.Infof("[YT] [SCRAPER] Stream with ID %s is being streamed on a different platform, skipping", id)
+				slog.Info("streaming on a different platform",
+					p.prefix,
+					slog.String("id", id),
+				)
 			}
 		} else {
-			log.Infof("[YT] [SCRAPER] Stream with ID %s was already sent", id)
+			slog.Info("already sent",
+				p.prefix,
+				slog.String("id", id),
+			)
 		}
 	} else {
 		p.state.CurrentStreams.YouTube = dggarchivermodel.VOD{}
-		log.Infof("[YT] [SCRAPER] No stream found")
+		slog.Info("not live",
+			p.prefix,
+		)
 	}
 
-	util.HealthCheck(p.cfg.Notifier.Platforms.YouTube.HealthCheck)
+	util.HealthCheck(p.cfg.Platforms.YouTube.HealthCheck)
 
 	return nil
 }
 
 func (p *Scraper) scrape() string {
-	if err := p.c.Visit(fmt.Sprintf("https://youtube.com/channel/%s/live?hl=en", p.cfg.Notifier.Platforms.YouTube.Channel)); err != nil {
+	if err := p.c.Visit(fmt.Sprintf("https://youtube.com/channel/%s/live?hl=en", p.cfg.Platforms.YouTube.Channel)); err != nil {
 		return ""
 	}
 

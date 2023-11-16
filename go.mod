@@ -1,15 +1,14 @@
 module github.com/DggHQ/dggarchiver-notifier
 
-go 1.19
+go 1.21
 
 require (
-	github.com/DggHQ/dggarchiver-config v0.0.0-20231013160751-8ba63bb8cf34
-	github.com/DggHQ/dggarchiver-logger v0.0.0-20230224190431-3025eee98c2d
+	github.com/DggHQ/dggarchiver-config v0.0.0-20231116090443-72f14df9bf43
 	github.com/DggHQ/dggarchiver-model v0.0.0-20230525000132-7fa749218fac
-	github.com/apex/log v1.9.0
 	github.com/bogdanfinn/fhttp v0.5.23
 	github.com/bogdanfinn/tls-client v1.3.12
 	github.com/gocolly/colly/v2 v2.1.0
+	github.com/nats-io/nats.go v1.26.0
 	github.com/vadv/gopher-lua-libs v0.4.1
 	github.com/yuin/gopher-lua v1.1.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
@@ -59,10 +58,8 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/nats-io/jwt/v2 v2.3.0 // indirect
-	github.com/nats-io/nats.go v1.26.0 // indirect
 	github.com/nats-io/nkeys v0.4.4 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.15.1 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect

@@ -1,10 +1,9 @@
 package util
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
-
-	log "github.com/DggHQ/dggarchiver-logger"
 )
 
 var healthCheckClient = &http.Client{
@@ -18,6 +17,6 @@ func HealthCheck(url string) {
 
 	_, err := healthCheckClient.Head(url)
 	if err != nil {
-		log.Errorf("HealthCheck error: %s", err)
+		slog.Error("unable to send healthcheck request", slog.Any("err", err))
 	}
 }

@@ -4,25 +4,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
+	"os"
+	"slices"
 	"strings"
 	"time"
 
 	config "github.com/DggHQ/dggarchiver-config/notifier"
-	log "github.com/DggHQ/dggarchiver-logger"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
 	"github.com/DggHQ/dggarchiver-notifier/state"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	http "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
 	lua "github.com/yuin/gopher-lua"
-	"golang.org/x/exp/slices"
 )
 
 type Platform struct {
 	httpClient tls_client.HttpClient
 	cfg        *config.Config
 	state      *state.State
-	prefix     string
+	prefix     slog.Attr
 	sleepTime  time.Duration
 }
 
@@ -45,10 +46,13 @@ func New(cfg *config.Config, state *state.State) *Platform {
 	var err error
 
 	p := Platform{
-		cfg:       cfg,
-		state:     state,
-		prefix:    "[Kick] [SCRAPER]",
-		sleepTime: time.Second * 60 * time.Duration(cfg.Notifier.Platforms.Kick.ScraperRefresh),
+		cfg:   cfg,
+		state: state,
+		prefix: slog.Group("platform",
+			slog.String("name", "kick"),
+			slog.String("method", "scrape"),
+		),
+		sleepTime: time.Second * 60 * time.Duration(cfg.Platforms.Kick.ScraperRefresh),
 	}
 
 	jar := tls_client.NewCookieJar()
@@ -59,20 +63,24 @@ func New(cfg *config.Config, state *state.State) *Platform {
 		tls_client.WithCookieJar(jar),
 	}
 
-	if cfg.Notifier.Platforms.Kick.ProxyURL != "" {
-		options = append(options, tls_client.WithProxyUrl(cfg.Notifier.Platforms.Kick.ProxyURL))
+	if cfg.Platforms.Kick.ProxyURL != "" {
+		options = append(options, tls_client.WithProxyUrl(cfg.Platforms.Kick.ProxyURL))
 	}
 
 	p.httpClient, err = tls_client.NewHttpClient(tls_client.NewNoopLogger(), options...)
 	if err != nil {
-		log.Fatalf("[Kick] [SCRAPER] Error while creating a TLS client: %s", err)
+		slog.Error("unable to create a TLS client",
+			p.prefix,
+			slog.Any("err", err),
+		)
+		os.Exit(1)
 	}
 
 	return &p
 }
 
-// GetPrefix returns a log prefix for platform p
-func (p *Platform) GetPrefix() string {
+// GetPrefix returns a slog.Attr group for platform p
+func (p *Platform) GetPrefix() slog.Attr {
 	return p.prefix
 }
 
@@ -89,14 +97,17 @@ func (p *Platform) CheckLivestream(l *lua.LState) error {
 	if stream != nil && stream.Livestream.IsLive {
 		if !slices.Contains(p.state.SentVODs, fmt.Sprintf("kick:%d", stream.Livestream.ID)) {
 			if p.state.CheckPriority("Kick", p.cfg) {
-				log.Infof("[Kick] [SCRAPER] Found a currently running stream with ID %d", stream.Livestream.ID)
-				if p.cfg.Notifier.Plugins.Enabled {
+				slog.Info("stream found",
+					p.prefix,
+					slog.Int("id", stream.Livestream.ID),
+				)
+				if p.cfg.Plugins.Enabled {
 					util.LuaCallReceiveFunction(l, fmt.Sprintf("%d", stream.Livestream.ID))
 				}
 
 				vod := &dggarchivermodel.VOD{
 					Platform:    "kick",
-					Downloader:  p.cfg.Notifier.Platforms.Kick.Downloader,
+					Downloader:  p.cfg.Platforms.Kick.Downloader,
 					ID:          fmt.Sprintf("%d", stream.Livestream.ID),
 					PlaybackURL: stream.URL,
 					Title:       stream.Livestream.Title,
@@ -109,39 +120,60 @@ func (p *Platform) CheckLivestream(l *lua.LState) error {
 
 				bytes, err := json.Marshal(vod)
 				if err != nil {
-					log.Fatalf("[Kick] [SCRAPER] Couldn't marshal VOD with ID %s into a JSON object: %v", vod.ID, err)
-				}
-
-				if err = p.cfg.NATS.NatsConnection.Publish(fmt.Sprintf("%s.job", p.cfg.NATS.Topic), bytes); err != nil {
-					log.Errorf("[Kick] [SCRAPER] Wasn't able to send message with VOD with ID %s: %v", vod.ID, err)
+					slog.Error("unable to marshal vod",
+						p.prefix,
+						slog.String("id", vod.ID),
+						slog.Any("err", err),
+					)
 					return nil
 				}
 
-				if p.cfg.Notifier.Plugins.Enabled {
+				if err = p.cfg.NATS.NatsConnection.Publish(fmt.Sprintf("%s.job", p.cfg.NATS.Topic), bytes); err != nil {
+					slog.Error("unable to publish message",
+						p.prefix,
+						slog.String("id", vod.ID),
+						slog.Any("err", err),
+					)
+					return nil
+				}
+
+				if p.cfg.Plugins.Enabled {
 					util.LuaCallSendFunction(l, vod)
 				}
 				p.state.SentVODs = append(p.state.SentVODs, fmt.Sprintf("kick:%s", vod.ID))
 				p.state.Dump()
 			} else {
-				log.Infof("[Kick] [SCRAPER] Stream with ID %d is being streamed on a different platform, skipping", stream.Livestream.ID)
+				slog.Info("streaming on a different platform",
+					p.prefix,
+					slog.Int("id", stream.Livestream.ID),
+				)
 			}
 		} else {
-			log.Infof("[Kick] [SCRAPER] Stream with ID %d was already sent", stream.Livestream.ID)
+			slog.Info("already sent",
+				p.prefix,
+				slog.Int("id", stream.Livestream.ID),
+			)
 		}
 	} else {
 		p.state.CurrentStreams.Kick = dggarchivermodel.VOD{}
-		log.Infof("[Kick] [SCRAPER] No stream found")
+		slog.Info("not live",
+			p.prefix,
+		)
 	}
 
-	util.HealthCheck(p.cfg.Notifier.Platforms.Kick.HealthCheck)
+	util.HealthCheck(p.cfg.Platforms.Kick.HealthCheck)
 
 	return nil
 }
 
 func (p *Platform) scrape() *api {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://kick.com/api/v1/channels/%s", p.cfg.Notifier.Platforms.Kick.Channel), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://kick.com/api/v1/channels/%s", p.cfg.Platforms.Kick.Channel), nil)
 	if err != nil {
-		log.Fatalf("[Kick] [SCRAPER] Error creating a request: %s", err)
+		slog.Error("unable to create request",
+			p.prefix,
+			slog.Any("err", err),
+		)
+		os.Exit(1)
 	}
 
 	req.Header = http.Header{
@@ -157,21 +189,30 @@ func (p *Platform) scrape() *api {
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
-		log.Errorf("[Kick] [SCRAPER] Error making a request: %s", err)
+		slog.Error("unable to make request",
+			p.prefix,
+			slog.Any("err", err),
+		)
 		return nil
 	}
 
 	defer resp.Body.Close()
 	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Errorf("[Kick] [SCRAPER] Error reading the response: %s", err)
+		slog.Error("unable to read response",
+			p.prefix,
+			slog.Any("err", err),
+		)
 		return nil
 	}
 
 	var stream api
 	err = json.Unmarshal(bytes, &stream)
 	if err != nil {
-		log.Errorf("[Kick] [SCRAPER] Error unmarshalling the response: %s", err)
+		slog.Error("unable to unmarshal response",
+			p.prefix,
+			slog.Any("err", err),
+		)
 		return nil
 	}
 
