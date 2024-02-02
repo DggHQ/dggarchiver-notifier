@@ -11,6 +11,7 @@ import (
 
 	config "github.com/DggHQ/dggarchiver-config/notifier"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
+	"github.com/DggHQ/dggarchiver-notifier/platforms/implementation"
 	"github.com/DggHQ/dggarchiver-notifier/state"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	"github.com/gocolly/colly/v2"
@@ -18,12 +19,26 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-var ytRegexp = regexp.MustCompile(`\/watch\?v=([^\"]*)`)
+var (
+	ErrUnableToParseInfo = errors.New("unable to parse youtube video page data")
+	ytRegexp             = regexp.MustCompile(`\/watch\?v=([^\"]*)`)
+)
+
+type videoSchemaMicrodata struct {
+	Invalid   bool
+	Title     string
+	PubTime   string
+	StartTime string
+	EndTime   string
+	Thumbnail string
+}
 
 type Scraper struct {
 	c         *colly.Collector
+	c2        *colly.Collector
 	index     int
 	idChan    chan string
+	infoChan  chan videoSchemaMicrodata
 	cfg       *config.Config
 	state     *state.State
 	prefix    slog.Attr
@@ -31,24 +46,31 @@ type Scraper struct {
 }
 
 // New returns a new YouTube Scraper platform struct
-func NewScraper(cfg *config.Config, state *state.State) *Scraper {
+func NewScraper(cfg *config.Config, state *state.State) implementation.Platform {
 	c := colly.NewCollector()
 	// disable cookie handling to bypass youtube consent screen
 	c.DisableCookies()
 	c.AllowURLRevisit = true
 
+	c2 := colly.NewCollector()
+	c2.DisableCookies()
+	c2.AllowURLRevisit = true
+
 	idChan := make(chan string)
+	infoChan := make(chan videoSchemaMicrodata)
 
 	p := Scraper{
-		c:      c,
-		idChan: idChan,
-		cfg:    cfg,
-		state:  state,
+		c:        c,
+		c2:       c2,
+		idChan:   idChan,
+		infoChan: infoChan,
+		cfg:      cfg,
+		state:    state,
 		prefix: slog.Group("platform",
-			slog.String("name", "youtube"),
-			slog.String("method", "scrape"),
+			slog.String("name", platformName),
+			slog.String("method", scraperMethod),
 		),
-		sleepTime: time.Second * 60 * time.Duration(cfg.Platforms.YouTube.ScraperRefresh),
+		sleepTime: time.Second * 60 * time.Duration(cfg.Platforms.YouTube.RefreshTime),
 	}
 
 	c.OnResponse(func(r *colly.Response) {
@@ -62,6 +84,72 @@ func NewScraper(cfg *config.Config, state *state.State) *Scraper {
 			} else {
 				idChan <- ""
 			}
+		}()
+	})
+
+	c2.OnHTML("div[itemscope]", func(h *colly.HTMLElement) {
+		go func() {
+			info := videoSchemaMicrodata{}
+
+			h.ForEachWithBreak("[itemprop]", func(i int, h *colly.HTMLElement) bool {
+				prop := h.Attr("itemprop")
+				content := h.Attr("content")
+				if content == "" {
+					content = h.Attr("href")
+				}
+
+				switch prop {
+				case "name":
+					if content == "" {
+						info.Invalid = true
+						return false
+					}
+					info.Title = content
+				case "datePublished":
+					if content == "" {
+						info.Invalid = true
+						return false
+					}
+					pubTimeParsed, err := time.Parse("2006-01-02T15:04:05-07:00", content)
+					if err != nil {
+						info.Invalid = true
+						return false
+					}
+					info.PubTime = pubTimeParsed.UTC().Format(time.RFC3339)
+				case "startDate":
+					if content == "" {
+						info.Invalid = true
+						return false
+					}
+					startTimeParsed, err := time.Parse("2006-01-02T15:04:05-07:00", content)
+					if err != nil {
+						info.Invalid = true
+						return false
+					}
+					info.StartTime = startTimeParsed.UTC().Format(time.RFC3339)
+				case "endDate":
+					if content == "" {
+						info.Invalid = true
+						return false
+					}
+					endTimeParsed, err := time.Parse("2006-01-02T15:04:05-07:00", content)
+					if err != nil {
+						info.Invalid = true
+						return false
+					}
+					info.EndTime = endTimeParsed.UTC().Format(time.RFC3339)
+				case "thumbnailUrl":
+					if content == "" {
+						info.Invalid = true
+						return false
+					}
+					info.Thumbnail = content
+				}
+
+				return true
+			})
+
+			p.infoChan <- info
 		}()
 	})
 
@@ -93,20 +181,20 @@ func (p *Scraper) CheckLivestream(l *lua.LState) error {
 				if p.cfg.Plugins.Enabled {
 					util.LuaCallReceiveFunction(l, id)
 				}
-				vid, _, err := getVideoInfo(p.cfg, id, "")
-				if err != nil && !errors.Is(err, errIsNotModified) {
+				vid, err := p.getVideoInfo(id)
+				if err != nil {
 					return err
 				}
 
 				vod := &dggarchivermodel.VOD{
 					Platform:   "youtube",
 					Downloader: p.cfg.Platforms.YouTube.Downloader,
-					ID:         vid[0].Id,
-					PubTime:    vid[0].Snippet.PublishedAt,
-					Title:      vid[0].Snippet.Title,
-					StartTime:  vid[0].LiveStreamingDetails.ActualStartTime,
-					EndTime:    vid[0].LiveStreamingDetails.ActualEndTime,
-					Thumbnail:  vid[0].Snippet.Thumbnails.Medium.Url,
+					ID:         id,
+					PubTime:    vid.PubTime,
+					Title:      vid.Title,
+					StartTime:  vid.StartTime,
+					EndTime:    vid.EndTime,
+					Thumbnail:  vid.Thumbnail,
 				}
 
 				p.state.CurrentStreams.YouTube = *vod
@@ -165,4 +253,17 @@ func (p *Scraper) scrape() string {
 	}
 
 	return <-p.idChan
+}
+
+func (p *Scraper) getVideoInfo(id string) (*videoSchemaMicrodata, error) {
+	if err := p.c2.Visit(fmt.Sprintf("https://youtube.com/watch?v=%s", id)); err != nil {
+		return nil, err
+	}
+
+	data := <-p.infoChan
+	if data.Invalid {
+		return nil, ErrUnableToParseInfo
+	}
+
+	return &data, nil
 }

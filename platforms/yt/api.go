@@ -2,13 +2,13 @@ package yt
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
 	config "github.com/DggHQ/dggarchiver-config/notifier"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
+	"github.com/DggHQ/dggarchiver-notifier/platforms/implementation"
 	"github.com/DggHQ/dggarchiver-notifier/state"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	lua "github.com/yuin/gopher-lua"
@@ -25,15 +25,15 @@ type API struct {
 }
 
 // New returns a new YouTube API platform struct
-func NewAPI(cfg *config.Config, state *state.State) *API {
+func NewAPI(cfg *config.Config, state *state.State) implementation.Platform {
 	p := API{
 		cfg:   cfg,
 		state: state,
 		prefix: slog.Group("platform",
-			slog.String("name", "youtube"),
-			slog.String("method", "api"),
+			slog.String("name", platformName),
+			slog.String("method", apiMethod),
 		),
-		sleepTime: time.Second * 60 * time.Duration(cfg.Platforms.YouTube.APIRefresh),
+		sleepTime: time.Second * 60 * time.Duration(cfg.Platforms.YouTube.RefreshTime),
 	}
 
 	return &p
@@ -54,7 +54,7 @@ func (p *API) GetSleepTime() time.Duration {
 func (p *API) CheckLivestream(l *lua.LState) error {
 	vid, etagEnd, err := p.getLivestreamID(p.state.SearchETag)
 	if err != nil {
-		if errors.Is(err, errIsNotModified) {
+		if googleapi.IsNotModified(err) {
 			slog.Info("identical etag, skipping",
 				p.prefix,
 				slog.String("etag", etagEnd),
@@ -140,19 +140,25 @@ func (p *API) CheckLivestream(l *lua.LState) error {
 func (p *API) getLivestreamID(etag string) ([]*youtube.Video, string, error) {
 	resp, err := p.cfg.Platforms.YouTube.Service.Search.List([]string{"snippet"}).IfNoneMatch(etag).EventType("live").ChannelId(p.cfg.Platforms.YouTube.Channel).Type("video").Do()
 	if err != nil {
-		if !googleapi.IsNotModified(err) {
-			return nil, etag, wrapWithYTError(err, "API", "Youtube API error")
-		}
-		return nil, etag, wrapWithYTError(errIsNotModified, "API", "Got a 304 Not Modified for livestream ID, returning an empty slice")
+		return nil, etag, err
 	}
 
 	if len(resp.Items) > 0 {
-		id, _, err := getVideoInfo(p.cfg, resp.Items[0].Id.VideoId, "")
-		if err != nil && !errors.Is(err, errIsNotModified) {
+		id, _, err := p.getVideoInfo(resp.Items[0].Id.VideoId, "")
+		if err != nil && !googleapi.IsNotModified(err) {
 			return id, resp.Etag, nil
 		}
 		return id, resp.Etag, nil
 	}
 
 	return nil, resp.Etag, nil
+}
+
+func (p *API) getVideoInfo(id string, etag string) ([]*youtube.Video, string, error) {
+	resp, err := p.cfg.Platforms.YouTube.Service.Videos.List([]string{"snippet", "liveStreamingDetails"}).IfNoneMatch(etag).Id(id).Do()
+	if err != nil {
+		return nil, etag, err
+	}
+
+	return resp.Items, resp.Etag, nil
 }

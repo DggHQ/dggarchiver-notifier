@@ -6,6 +6,10 @@ import (
 	config "github.com/DggHQ/dggarchiver-config/notifier"
 	"github.com/DggHQ/dggarchiver-notifier/platforms"
 	"github.com/DggHQ/dggarchiver-notifier/state"
+
+	_ "github.com/DggHQ/dggarchiver-notifier/platforms/kick"
+	_ "github.com/DggHQ/dggarchiver-notifier/platforms/rumble"
+	_ "github.com/DggHQ/dggarchiver-notifier/platforms/yt"
 )
 
 func main() {

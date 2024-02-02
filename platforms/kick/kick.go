@@ -12,12 +12,22 @@ import (
 
 	config "github.com/DggHQ/dggarchiver-config/notifier"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
+	"github.com/DggHQ/dggarchiver-notifier/platforms/implementation"
 	"github.com/DggHQ/dggarchiver-notifier/state"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	http "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
 	lua "github.com/yuin/gopher-lua"
 )
+
+const (
+	platformName   string = "kick"
+	platformMethod string = "scraper"
+)
+
+func init() {
+	implementation.Map[fmt.Sprintf("%s_%s", platformName, platformMethod)] = New
+}
 
 type Platform struct {
 	httpClient tls_client.HttpClient
@@ -42,17 +52,17 @@ type api struct {
 }
 
 // New returns a new Kick platform struct
-func New(cfg *config.Config, state *state.State) *Platform {
+func New(cfg *config.Config, state *state.State) implementation.Platform {
 	var err error
 
 	p := Platform{
 		cfg:   cfg,
 		state: state,
 		prefix: slog.Group("platform",
-			slog.String("name", "kick"),
-			slog.String("method", "scrape"),
+			slog.String("name", platformName),
+			slog.String("method", platformMethod),
 		),
-		sleepTime: time.Second * 60 * time.Duration(cfg.Platforms.Kick.ScraperRefresh),
+		sleepTime: time.Second * 60 * time.Duration(cfg.Platforms.Kick.RefreshTime),
 	}
 
 	jar := tls_client.NewCookieJar()

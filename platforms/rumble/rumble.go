@@ -12,12 +12,22 @@ import (
 
 	config "github.com/DggHQ/dggarchiver-config/notifier"
 	dggarchivermodel "github.com/DggHQ/dggarchiver-model"
+	"github.com/DggHQ/dggarchiver-notifier/platforms/implementation"
 	"github.com/DggHQ/dggarchiver-notifier/state"
 	"github.com/DggHQ/dggarchiver-notifier/util"
 	"github.com/gocolly/colly/v2"
 	lua "github.com/yuin/gopher-lua"
 	"golang.org/x/exp/slices"
 )
+
+const (
+	platformName   string = "rumble"
+	platformMethod string = "scraper"
+)
+
+func init() {
+	implementation.Map[fmt.Sprintf("%s_%s", platformName, platformMethod)] = New
+}
 
 type Platform struct {
 	vodChan   chan *dggarchivermodel.VOD
@@ -39,7 +49,7 @@ type oembed struct {
 }
 
 // New returns a new Rumble platform struct
-func New(cfg *config.Config, state *state.State) *Platform {
+func New(cfg *config.Config, state *state.State) implementation.Platform {
 	vodChan := make(chan *dggarchivermodel.VOD)
 
 	c1 := colly.NewCollector()
@@ -58,10 +68,10 @@ func New(cfg *config.Config, state *state.State) *Platform {
 		cfg:      cfg,
 		state:    state,
 		prefix: slog.Group("platform",
-			slog.String("name", "rumble"),
-			slog.String("method", "scrape"),
+			slog.String("name", platformName),
+			slog.String("method", platformMethod),
 		),
-		sleepTime: time.Second * 60 * time.Duration(cfg.Platforms.Rumble.ScraperRefresh),
+		sleepTime: time.Second * 60 * time.Duration(cfg.Platforms.Rumble.RefreshTime),
 	}
 
 	c1.OnHTML("a.video-item--a", func(h *colly.HTMLElement) {
