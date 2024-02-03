@@ -46,6 +46,10 @@ func New(cfg *config.Config, state *state.State) *Platforms {
 		}
 	}
 
+	if len(enabledPlatformsSorted) == 0 {
+		enabledPlatformsSorted = enabledPlatforms
+	}
+
 	return &Platforms{
 		enabledPlatforms: enabledPlatformsSorted,
 		wg:               sync.WaitGroup{},
