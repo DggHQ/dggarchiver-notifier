@@ -108,16 +108,22 @@ func NewScraper(cfg *config.Config, state *state.State) implementation.Platform 
 		}()
 	})
 
-	c2.OnHTML("div[itemscope]", func(h *colly.HTMLElement) {
+	c2.OnHTML("div[itemscope][itemid]", func(h *colly.HTMLElement) {
 		go func() {
 			id := h.Request.URL.Query().Get("v")
 			info := videoSchemaMicrodata{}
+			ranOnce := false
 
 			defer func() {
+				if !ranOnce {
+					info.Invalid = true
+				}
 				p.infoChan <- info
 			}()
 
 			h.ForEachWithBreak("[itemprop]", func(_ int, h *colly.HTMLElement) bool {
+				ranOnce = true
+
 				prop := h.Attr("itemprop")
 				content := h.Attr("content")
 				if content == "" {
@@ -135,7 +141,7 @@ func NewScraper(cfg *config.Config, state *state.State) implementation.Platform 
 						info.Invalid = true
 						return false
 					}
-					if h.Name == "meta" {
+					if h.Name == "meta" && len(info.Title) == 0 {
 						info.Title = content
 					}
 				case "datePublished":
