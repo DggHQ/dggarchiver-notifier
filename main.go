@@ -10,6 +10,7 @@ import (
 
 	_ "github.com/DggHQ/dggarchiver-notifier/platforms/kick"
 	_ "github.com/DggHQ/dggarchiver-notifier/platforms/rumble"
+	_ "github.com/DggHQ/dggarchiver-notifier/platforms/tiktok"
 	_ "github.com/DggHQ/dggarchiver-notifier/platforms/yt"
 )
 

@@ -63,7 +63,7 @@ func (p *Platforms) Start() {
 		imp := implementation.Map[v](p.cfg, p.state)
 		slog.Info("running platform loop",
 			imp.GetPrefix(),
-			slog.Int("refresh_time", p.cfg.Platforms.YouTube.RefreshTime),
+			slog.Int("refresh_time", int(imp.GetSleepTime().Minutes())),
 		)
 		p.wg.Add(1)
 		implementation.LaunchLoop(imp)
