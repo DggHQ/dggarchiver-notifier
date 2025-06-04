@@ -81,7 +81,7 @@ func (p *Platform) CheckLivestream() error {
 	stream := p.scrape()
 
 	if stream != nil {
-		slog.Info("got stream", "stream", stream)
+		slog.Debug("got stream", "stream", stream)
 		if !slices.Contains(p.state.SentVODs, fmt.Sprintf("tiktok:%d", stream.StreamID)) {
 			if p.state.CheckPriority("TikTok", p.cfg) {
 				slog.Info("stream found",
