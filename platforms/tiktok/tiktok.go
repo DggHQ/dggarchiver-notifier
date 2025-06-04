@@ -172,11 +172,15 @@ func (p *Platform) CheckLivestream() error {
 
 func (p *Platform) scrape() *gotiktoklive.RoomInfo {
 	stream, err := p.tt.GetRoomInfo(p.cfg.Platforms.TikTok.Channel)
-	if err != nil && (!errors.Is(err, gotiktoklive.ErrUserOffline) || !errors.Is(err, gotiktoklive.ErrLiveHasEnded)) {
-		slog.Error("unable to get tiktok room info",
-			p.prefix,
-			slog.Any("err", err),
-		)
+	if err != nil {
+		switch {
+		case !errors.Is(err, gotiktoklive.ErrUserOffline), !errors.Is(err, gotiktoklive.ErrLiveHasEnded):
+		default:
+			slog.Error("unable to get tiktok room info",
+				p.prefix,
+				slog.Any("err", err),
+			)
+		}
 		return nil
 	}
 
