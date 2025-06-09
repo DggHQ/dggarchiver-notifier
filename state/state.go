@@ -18,6 +18,7 @@ type State struct {
 		YouTube dggarchivermodel.VOD
 		Rumble  dggarchivermodel.VOD
 		Kick    dggarchivermodel.VOD
+		TikTok  dggarchivermodel.VOD
 	} `json:"-"`
 	kv nats.KeyValue
 }

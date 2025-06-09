@@ -1,38 +1,48 @@
+version: "2"
+run:
+  go: "1.21"
 linters:
+  default: none
   enable:
     - bidichk
     - dupl
     - errcheck
     - gocritic
-    - gofmt
-    - gofumpt
-    - gosimple
     - govet
     - ineffassign
     - nakedret
     - revive
     - staticcheck
-    - stylecheck
-    - typecheck
     - unconvert
-    - wastedassign
     - unused
-  enable-all: false
-  disable-all: true
-  fast: false
-
-run:
-  go: "1.21"
-  timeout: 10m
-
+    - wastedassign
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-
 severity:
-  default-severity: error
-  case-sensitive: false
+  default: error
   rules:
     - linters:
         - unused
       severity: warning
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
