@@ -80,7 +80,7 @@ func (p *Platform) GetSleepTime() time.Duration {
 func (p *Platform) CheckLivestream() error {
 	stream := p.scrape()
 
-	if stream != nil {
+	if stream != nil && stream.StreamID != 0 {
 		slog.Debug("got stream", "stream", stream)
 		if !slices.Contains(p.state.SentVODs, fmt.Sprintf("tiktok:%d", stream.StreamID)) {
 			if p.state.CheckPriority("TikTok", p.cfg) {
